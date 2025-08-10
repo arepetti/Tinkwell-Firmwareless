@@ -1,0 +1,3 @@
+[submodule "esp-idf"]
+	path = Examples/Thermostat/esp-idf
+	url = https://github.com/espressif/esp-idf.git

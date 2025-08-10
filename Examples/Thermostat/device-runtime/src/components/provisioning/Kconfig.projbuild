@@ -1,0 +1,103 @@
+menu "Provisioning"
+    config TW_PROVISIONING_DEFAULT_DEVICE_ID
+        string "Default device ID"
+        default "device"
+
+    menu "Factory provisioning"
+        choice
+            prompt "Ethernet backend"
+            default TW_FPROV_USE_OPENETH if TW_USE_OPENETH
+            default TW_FPROV_USE_INTERNAL if TW_USE_INTERNAL_ETHERNET
+            default TW_FPROV_USE_SPI1 if TW_USE_SPI_ETHERNET
+
+            config TW_FPROV_USE_INTERNAL
+                bool "Internal MAC + PHY" if TW_USE_INTERNAL_ETHERNET
+
+            config TW_FPROV_USE_OPENETH
+                bool "OpenCores (for QEMU only)" if TW_USE_OPENETH
+
+            config TW_FPROV_USE_SPI1
+                bool "SPI 1" if TW_USE_SPI_ETHERNET
+
+            config TW_FPROV_USE_SPI2
+                bool "SPI 2" if TW_USE_SPI_ETHERNET
+        endchoice
+
+        config TW_FPROV_TCP_PORT
+            int "TCP port for the provisioning server"
+            default 32080
+            
+        config TW_FPROV_USE_DHCP
+            bool "Use DHCP"
+            default false
+
+        config TW_FPROV_DHCP_TIMEOUT_MS
+            int "DHCP timeout (in milliseconds)"
+            default 10000
+            depends on TW_FPROV_USE_DHCP
+
+        config TW_FPROV_STATIC_IP_ADDRESS
+            string "Static IPv4 address"
+            default "110.0.2.15" if TW_USE_OPENETH
+            default "169.254.1.15"
+
+        config TW_FPROV_STATIC_IP_NET_MASK
+            string "Static IPv4 address netmask"
+            default "255.255.255.0" if TW_USE_OPENETH
+            default "255.255.0.0"
+
+        config TW_FPROV_STATIC_IP_GATEWAY_ADDRESS
+            string "Static IPv4 Gateway address"
+            default "10.0.2.2" if TW_USE_OPENETH
+            default "169.254.1.1"
+    endmenu
+
+    menu "Operational provisioning"
+        choice
+            prompt "Ethernet backend"
+            default TW_OPROV_USE_OPENETH if TW_USE_OPENETH
+            default TW_OPROV_USE_INTERNAL if TW_USE_INTERNAL_ETHERNET
+            default TW_OPROV_USE_SPI1 if TW_USE_SPI_ETHERNET
+
+            config TW_OPROV_USE_INTERNAL
+                bool "Internal MAC + PHY" if TW_USE_INTERNAL_ETHERNET
+
+            config TW_OPROV_USE_OPENETH
+                bool "OpenCores (for QEMU only)" if TW_USE_OPENETH
+
+            config TW_OPROV_USE_SPI1
+                bool "SPI 1" if TW_USE_SPI_ETHERNET
+
+            config TW_OPROV_USE_SPI2
+                bool "SPI 2" if TW_USE_SPI_ETHERNET
+        endchoice
+
+        config TW_OPROV_TCP_PORT
+            int "TCP port for the provisioning server"
+            default 32080
+            
+        config TW_OPROV_USE_DHCP
+            bool "Use DHCP"
+            default false
+
+        config TW_OPROV_DHCP_TIMEOUT_MS
+            int "DHCP timeout (in milliseconds)"
+            default 10000
+            depends on TW_FPROV_USE_DHCP
+
+        config TW_OPROV_STATIC_IP_ADDRESS
+            string "Static IPv4 address"
+            default "110.0.2.15" if TW_USE_OPENETH
+            default "169.254.1.15"
+
+        config TW_OPROV_STATIC_IP_NET_MASK
+            string "Static IPv4 address netmask"
+            default "255.255.255.0" if TW_USE_OPENETH
+            default "255.255.0.0"
+
+        config TW_OPROV_STATIC_IP_GATEWAY_ADDRESS
+            string "Static IPv4 Gateway address"
+            default "10.0.2.2" if TW_USE_OPENETH
+            default "169.254.1.1"
+    endmenu
+endmenu

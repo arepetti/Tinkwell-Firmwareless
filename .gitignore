@@ -1,0 +1,70 @@
+# ---- C# / .NET ----
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+*.binlog
+
+# .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# ASP.NET Scaffolding
+ScaffoldingReadMe.txt
+
+
+# NuGet
+packages/
+*.nupkg
+*.snupkg
+
+# Others
+~$*
+*~
+._*
+
+# Tests
+CodeCoverage/
+*.coverage
+*.coveragexml
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.VisualState.xml
+TestResult.xml
+nunit-*.xml
+
+# ---- ESP-IDF C ----
+build/
+temp/
+sdkconfig.old
+*.elf
+*.bin
+*.map
+
+# ---- OS/editor ----
+.DS_Store.idea/
+.vscode/
+.vs/
+*.code-workspace
+
+# User settings
+*.user
+*.userosscache
+*.suo
+*.vcxproj.user
+
+# OS stuff
+Thumbs.db
+*.swp

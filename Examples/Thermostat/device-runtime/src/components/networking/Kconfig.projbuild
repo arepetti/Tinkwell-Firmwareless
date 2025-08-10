@@ -1,0 +1,13 @@
+menu "Networking"
+    rsource "config/ethernet.conf"
+
+    config TW_NET_GET_IP_TIMEOUT
+        int "Maximum time to wait for IP address (in milliseconds)"
+        default 5000
+        help
+            Maximum time (in milliseconds) to wait for an IP address on the primary interface.
+            It applies to DHCP assigned IPs but also static IPs if the configuration takes longer than
+            this (for example if the connection takes longer to estabilish). It's applied to all
+            connection types (ethernet, Wi-Fi, etc).
+            If a DHCP timeout is specified then it takes precedence over this value.
+endmenu
