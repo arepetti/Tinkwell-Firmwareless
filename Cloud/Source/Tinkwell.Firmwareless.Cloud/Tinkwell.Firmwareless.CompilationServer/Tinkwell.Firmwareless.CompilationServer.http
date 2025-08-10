@@ -1,0 +1,6 @@
+@Tinkwell.Firmwareless.CompilationServer_HostAddress = http://localhost:5231
+
+GET {{Tinkwell.Firmwareless.CompilationServer_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,37 @@
+﻿name: firmwareless-platform
+metadata:
+  template: aspire
+
+services:
+  apphost:
+    project: ./Tinkwell.Firmwareless.Cloud
+    language: dotnet
+    host: aspire
+
+  tinkwell-public-repository:
+    project: ./Tinkwell.Firmwareless.PublicRepository
+    language: dotnet
+    host: containerapp
+    ingress:
+      external: true
+    bindings:
+      - resource: tinkwell-firmwarestore
+      - resource: tinkwell-firmwaredb-manifests
+
+  tinkwell-compilation-server:
+    project: ./Tinkwell.Firmwareless.CompilationServer
+    language: dotnet
+    host: containerapp
+    ingress:
+      external: false
+    bindings:
+      - resource: tinkwell-firmwarestore
+
+resources:
+  tinkwell-firmwarestore:
+    type: storage.blob
+    name: tinkwell-firmwarestore
+
+  tinkwell-firmwaredb-manifests:
+    type: postgres
+    name: tinkwell-firmwaredb-manifests

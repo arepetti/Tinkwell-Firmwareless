@@ -1,0 +1,23 @@
+@Tinkwell.Firmwareless.PublicRepository_HostAddress = http://localhost:5165
+@AdminApiKey = ak_Igssxm2M6EKOWUzFgYSTej4u_RYgcKmS
+@UserApiKey = ak_eIPYRrtNY0KWpRi-xo4LQSl8p8jvGXZn
+
+### Create a new API key
+POST {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/api/v1/keys
+X-Api-Key: {{AdminApiKey}}
+Content-Type: application/json
+
+{
+  "name": "Test",
+  "role": "User",
+  "daysValid": 30,
+  "scopes": ["firmware.read", "firmware.write"]
+}
+
+### List all keys
+GET {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/api/v1/keys
+X-Api-Key: {{AdminApiKey}}
+
+### Revoke a key
+DELETE {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/api/v1/keys/00000000-0000-0000-0000-000000000000
+X-Api-Key: {{AdminApiKey}}

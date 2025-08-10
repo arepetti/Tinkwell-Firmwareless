@@ -12,7 +12,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.AppHost" Version="9.0.0" />
+    <PackageReference Include="Aspire.Azure.Storage.Blobs" Version="9.4.0" />
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="9.4.0" />
+    <PackageReference Include="Aspire.Hosting.Azure.Storage" Version="9.4.0" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="9.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tinkwell.Firmwareless.CompilationServer\Tinkwell.Firmwareless.CompilationServer.csproj" />
+    <ProjectReference Include="..\Tinkwell.Firmwareless.PublicRepository\Tinkwell.Firmwareless.PublicRepository.csproj" />
   </ItemGroup>
 
 </Project>
