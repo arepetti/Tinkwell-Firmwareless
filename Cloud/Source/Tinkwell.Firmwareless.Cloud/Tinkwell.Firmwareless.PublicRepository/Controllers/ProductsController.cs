@@ -6,23 +6,23 @@ using Tinkwell.Firmwareless.PublicRepository.Services.Queries;
 namespace Tinkwell.Firmwareless.PublicRepository.Controllers;
 
 [ApiController]
-[Route("api/v1/keys")]
-public sealed class KeysController(ILogger<KeysController> logger, KeyService service) : TinkwellControllerBase(logger)
+[Route("api/v1/products")]
+public sealed class ProductsController(ILogger<VendorsController> logger, ProductService service) : TinkwellControllerBase(logger)
 {
     [HttpPost]
     [Authorize]
-    public async Task<ActionResult<KeyService.View>> Create(KeyService.CreateRequest request, CancellationToken ct)
+    public async Task<ActionResult<ProductService.View>> Create(ProductService.CreateRequest req, CancellationToken ct)
     {
         return await Try(async () =>
         {
-            var response = await _service.CreateAsync(HttpContext.User, request, ct);
-            return CreatedAtAction(nameof(Find), new { id = response.Id }, response);
+            var entity = await _service.CreateAsync(User, req, ct);
+            return CreatedAtAction(nameof(Find), new { id = entity.Id }, entity);
         });
     }
 
     [HttpGet]
     [Authorize]
-    public async Task<ActionResult<FindResponse<KeyService.View>>> FindAll(
+    public async Task<ActionResult<FindResponse<ProductService.View>>> FindAll(
         [FromQuery] int pageIndex = 0,
         [FromQuery] int pageLength = 20,
         [FromQuery] string? filter = null,
@@ -38,7 +38,7 @@ public sealed class KeysController(ILogger<KeysController> logger, KeyService se
 
     [HttpGet("{id:guid}")]
     [Authorize]
-    public async Task<ActionResult<KeyService.View>> Find(Guid id, CancellationToken ct)
+    public async Task<ActionResult<ProductService.View>> Find(Guid id, CancellationToken ct)
     {
         return await Try(async () =>
         {
@@ -46,15 +46,13 @@ public sealed class KeysController(ILogger<KeysController> logger, KeyService se
         });
     }
 
-    [HttpDelete("{id:guid}/revoke")]
+    [HttpPut]
     [Authorize]
-    public async Task<IActionResult> Revoke(Guid id, CancellationToken ct)
+    public async Task<ActionResult<ProductService.View>> Update(ProductService.UpdateRequest req, CancellationToken ct)
     {
         return await Try(async () =>
-        {
-            await _service.RevokeAsync(HttpContext.User, id, ct);
-            return NoContent();
-        });
+            Ok(await _service.UpdateAsync(User, req, ct))
+        );
     }
 
     [HttpDelete("{id:guid}")]
@@ -68,5 +66,5 @@ public sealed class KeysController(ILogger<KeysController> logger, KeyService se
         });
     }
 
-    private readonly KeyService _service = service;
+    private readonly ProductService _service = service;
 }

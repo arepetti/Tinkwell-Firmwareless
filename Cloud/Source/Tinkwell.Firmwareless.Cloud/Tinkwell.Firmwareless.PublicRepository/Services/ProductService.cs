@@ -9,31 +9,40 @@ namespace Tinkwell.Firmwareless.PublicRepository.Repositories;
 
 #pragma warning disable CA2208 // Instantiate argument exceptions correctly
 
-public sealed class VendorService(AppDbContext db) : ServiceBase(db)
+public sealed class ProductService(AppDbContext db) : ServiceBase(db)
 {
-    public sealed record CreateRequest(string Name, string Notes);
+    public sealed record CreateRequest(Guid VendorId, string Name, string Model, ProductStatus Status);
 
-    public sealed record UpdateRequest(Guid Id, string? Name, string? Notes);
+    public sealed record UpdateRequest(Guid Id, string? Name, string? Model, ProductStatus? Status);
 
-    public sealed record View(Guid Id, string Name, string Notes, DateTimeOffset CreatedAt);
+    public sealed record View(Guid Id, Guid VendorId, string Name, string Model, ProductStatus Status, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
 
     public async Task<View> CreateAsync(ClaimsPrincipal user, CreateRequest request, CancellationToken cancellationToken)
     {
         Debug.Assert(user is not null);
         Debug.Assert(request is not null);
 
-        var (role, scopes, _) = user.GetScopesAndVendorId();
-        if (role != UserRole.Admin || !scopes.Contains(Scopes.VendorCreate))
+        var (role, scopes, vendorId) = user.GetScopesAndVendorId();
+        if (role != UserRole.Admin || !scopes.Contains(Scopes.ProductCreate))
             throw new ForbiddenAccessException();
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(request.Name, nameof(request.Name));
+        if (role != UserRole.Admin && request.VendorId != vendorId)
+            throw new ForbiddenAccessException("User is not allowed to create products for this vendor.");
 
-        var entity = new Vendor
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.Name, nameof(request.Name));
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.Model, nameof(request.Model));
+
+        var vendor = await _db.Vendors.FindAsync([request.VendorId], cancellationToken);
+        if (vendor is null)
+            throw new NotFoundException(request.VendorId.ToString(), nameof(request.VendorId));
+
+        var entity = new Product
         {
             Id = Guid.NewGuid(),
             Name = request.Name,
-            Notes = request.Notes,
+            Model = request.Model,
             CreatedAt = DateTimeOffset.UtcNow,
+            Vendor = vendor,
         };
 
         await _db.AddAsync(entity, cancellationToken);
@@ -46,13 +55,15 @@ public sealed class VendorService(AppDbContext db) : ServiceBase(db)
         Debug.Assert(user is not null);
 
         var (role, _, vendorId) = user.GetScopesAndVendorId();
+
+        var query = _db.Products.AsNoTracking();
         if (role != UserRole.Admin)
-            throw new ForbiddenAccessException();
+            query = query.Where(x => x.VendorId == vendorId);
 
         return await FindAllAsync(
             user,
-            Scopes.VendorRead,
-            _db.Vendors.AsNoTracking(),
+            Scopes.ProductRead,
+            query,
             request,
             EntityToView,
             cancellationToken);
@@ -67,7 +78,7 @@ public sealed class VendorService(AppDbContext db) : ServiceBase(db)
         if (role == UserRole.None)
             throw new UnauthorizedAccessException("User must be authenticated to use this resource.");
 
-        if (!scopes.Contains(Scopes.VendorRead))
+        if (!scopes.Contains(Scopes.ProductRead))
             throw new ForbiddenAccessException();
 
         var entity = await TryFindAsync(role, vendorId, id, cancellationToken);
@@ -83,7 +94,7 @@ public sealed class VendorService(AppDbContext db) : ServiceBase(db)
         Debug.Assert(request is not null);
 
         var (role, scopes, vendorId) = user.GetScopesAndVendorId();
-        if (role != UserRole.Admin || !scopes.Contains(Scopes.VendorUpdate))
+        if (!scopes.Contains(Scopes.ProductUpdate))
             throw new ForbiddenAccessException();
 
         var entity = await TryFindAsync(role, vendorId, request.Id, cancellationToken);
@@ -93,8 +104,11 @@ public sealed class VendorService(AppDbContext db) : ServiceBase(db)
         if (request.Name is not null)
             entity.Name = request.Name;
 
-        if (request.Notes is not null)
-            entity.Notes = request.Notes;
+        if (request.Model is not null)
+            entity.Model = request.Model;
+
+        if (request.Status is not null)
+            entity.Status = request.Status.Value;
 
         await SaveChangesAsync(cancellationToken);
         return EntityToView(entity);
@@ -105,36 +119,41 @@ public sealed class VendorService(AppDbContext db) : ServiceBase(db)
         Debug.Assert(user is not null);
 
         var (role, scopes, vendorId) = user.GetScopesAndVendorId();
-        if (role != UserRole.Admin || !scopes.Contains(Scopes.VendorDelete))
+        if (!scopes.Contains(Scopes.ProductDelete))
             throw new ForbiddenAccessException();
 
         var entity = await TryFindAsync(role, vendorId, id, cancellationToken);
         if (entity is null)
             throw new NotFoundException(id.ToString(), nameof(id));
 
-        _db.Vendors.Remove(entity);
+        if (entity.VendorId != vendorId && role != UserRole.Admin)
+            throw new ForbiddenAccessException("User is not allowed to delete products for this vendor.");
 
+        _db.Products.Remove(entity);
         await SaveChangesAsync(cancellationToken);
     }
 
     private readonly AppDbContext _db = db;
 
-    private static View EntityToView(Vendor entity)
+    private static View EntityToView(Product entity)
     {
         return new View(
             entity.Id,
+            entity.VendorId,
             entity.Name,
-            entity.Notes,
-            entity.CreatedAt);
+            entity.Model,
+            entity.Status,
+            entity.CreatedAt,
+            entity.UpdatedAt);
     }
 
-    private async Task<Vendor?> TryFindAsync(UserRole role, Guid? userVendorId, Guid id, CancellationToken cancellationToken)
+    private async Task<Product?> TryFindAsync(UserRole role, Guid? userVendorId, Guid id, CancellationToken cancellationToken)
     {
-        // This is superfluous in MOST cases (this function is called only by Admin roles)
-        if (role != UserRole.Admin && userVendorId != id)
+        var product = await _db.Products.FindAsync([id], cancellationToken);
+        if (product is not null && role != UserRole.Admin && userVendorId != product.VendorId)
             return null;
 
-        return await _db.Vendors.FindAsync([id], cancellationToken);
+        return product;
     }
 }
 

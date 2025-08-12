@@ -11,18 +11,18 @@ public sealed class VendorsController(ILogger<VendorsController> logger, VendorS
 {
     [HttpPost]
     [Authorize(Policy = "Admin")]
-    public async Task<ActionResult<VendorService.VendorView>> Create(VendorService.CreateRequest req, CancellationToken ct)
+    public async Task<ActionResult<VendorService.View>> Create(VendorService.CreateRequest req, CancellationToken ct)
     {
         return await Try(async () =>
         {
-            var entity = await _service.CreateAsync(User, new VendorService.CreateRequest(req.Name, req.Notes), ct);
+            var entity = await _service.CreateAsync(User, req, ct);
             return CreatedAtAction(nameof(Find), new { id = entity.Id }, entity);
         });
     }
 
     [HttpGet]
     [Authorize(Policy = "Admin")]
-    public async Task<ActionResult<FindResponse<KeyService.KeyView>>> FindAll(
+    public async Task<ActionResult<FindResponse<VendorService.View>>> FindAll(
         [FromQuery] int pageIndex = 0,
         [FromQuery] int pageLength = 20,
         [FromQuery] string? filter = null,
@@ -38,7 +38,7 @@ public sealed class VendorsController(ILogger<VendorsController> logger, VendorS
 
     [HttpGet("{id:guid}")]
     [Authorize]
-    public async Task<ActionResult<KeyService.KeyView>> Find(Guid id, CancellationToken ct)
+    public async Task<ActionResult<VendorService.View>> Find(Guid id, CancellationToken ct)
     {
         return await Try(async () =>
         {
@@ -48,10 +48,10 @@ public sealed class VendorsController(ILogger<VendorsController> logger, VendorS
 
     [HttpPut]
     [Authorize(Policy = "Admin")]
-    public async Task<ActionResult<VendorService.VendorView>> Update(VendorService.UpdateRequest req, CancellationToken ct)
+    public async Task<ActionResult<VendorService.View>> Update(VendorService.UpdateRequest req, CancellationToken ct)
     {
         return await Try(async () =>
-            Ok(await _service.UpdateAsync(User, new VendorService.UpdateRequest(req.Id, req.Name, req.Notes), ct))
+            Ok(await _service.UpdateAsync(User, req, ct))
         );
     }
 

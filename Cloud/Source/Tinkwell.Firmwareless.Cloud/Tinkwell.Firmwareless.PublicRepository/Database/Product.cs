@@ -7,13 +7,11 @@ public enum ProductStatus
     Retired,
 }
 
-public sealed class Product
+public sealed class Product : EntityBase
 {
-    public Guid Id { get; set; }
     public string Name { get; set; } = "";
     public string Model { get; set; } = "";
     public ProductStatus Status { get; set; }
-    public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 
     public Guid VendorId { get; set; }

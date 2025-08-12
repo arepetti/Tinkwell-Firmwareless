@@ -22,9 +22,9 @@ public sealed class KeyService : ServiceBase
 
     public sealed record CreateRequest(Guid? VendorId, string Name, string Role, int DaysValid, string[] Scopes);
 
-    public sealed record KeyView(Guid Id, Guid? VendorId, string Name, string Role, string[] Scopes, DateTimeOffset CreatedAt, DateTimeOffset? ExpiresAt, DateTimeOffset? RevokedAt);
+    public sealed record View(Guid Id, Guid? VendorId, string Name, string Role, string[] Scopes, DateTimeOffset CreatedAt, DateTimeOffset? ExpiresAt, DateTimeOffset? RevokedAt);
 
-    public async Task<KeyView> CreateAsync(ClaimsPrincipal user, CreateRequest request, CancellationToken cancellationToken)
+    public async Task<View> CreateAsync(ClaimsPrincipal user, CreateRequest request, CancellationToken cancellationToken)
     {
         Debug.Assert(user is not null);
         Debug.Assert(request is not null);
@@ -69,7 +69,7 @@ public sealed class KeyService : ServiceBase
     public Task<bool> HasAdminKeyAsync(CancellationToken cancellationToken = default)
         => _db.ApiKeys.AnyAsync(x => x.Role == "Admin" && x.RevokedAt == null, cancellationToken);
 
-    public async Task<FindResponse<KeyView>> FindAllAsync(ClaimsPrincipal user, FindRequest request, CancellationToken cancellationToken)
+    public async Task<FindResponse<View>> FindAllAsync(ClaimsPrincipal user, FindRequest request, CancellationToken cancellationToken)
     {
         Debug.Assert(user is not null);
 
@@ -81,7 +81,7 @@ public sealed class KeyService : ServiceBase
         return await FindAllAsync(user, Scopes.KeyRead, query, request, EntityToView, cancellationToken);
     }
 
-    public async Task<KeyView> FindAsync(ClaimsPrincipal user, Guid id, CancellationToken cancellationToken)
+    public async Task<View> FindAsync(ClaimsPrincipal user, Guid id, CancellationToken cancellationToken)
     {
         Debug.Assert(user is not null);
         
@@ -143,7 +143,7 @@ public sealed class KeyService : ServiceBase
     private readonly AppDbContext _db;
     private readonly ApiKeyOptions _opts;
 
-    private async Task<(KeyView Result, string Plaintext)> CreateWithoutValidationAsync(CreateRequest request, bool vendorSpecific, CancellationToken cancellationToken)
+    private async Task<(View Result, string Plaintext)> CreateWithoutValidationAsync(CreateRequest request, bool vendorSpecific, CancellationToken cancellationToken)
     {
         var id = Guid.NewGuid();
         var plaintext = ApiKeyFormat.Generate(id, _opts);
@@ -189,9 +189,9 @@ public sealed class KeyService : ServiceBase
         return apiKey;
     }
 
-    private static KeyView EntityToView(ApiKey entity)
+    private static View EntityToView(ApiKey entity)
     {
-        return new KeyView(
+        return new View(
             entity.Id,
             entity.VendorId,
             entity.Name,
