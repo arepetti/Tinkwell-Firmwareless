@@ -38,27 +38,30 @@ public sealed class ApiKeyAuthHandler : AuthenticationHandler<AuthenticationSche
             return AuthenticateResult.Fail("Invalid API key signature.");
 
         // Single-row lookup by Id
-        var k = await _db.ApiKeys.FirstOrDefaultAsync(x => x.Id == keyId, Context.RequestAborted);
-        if (k is null || k.RevokedAt is not null || (k.ExpiresAt is not null && k.ExpiresAt <= DateTimeOffset.UtcNow))
+        var apiKey = await _db.ApiKeys.FirstOrDefaultAsync(x => x.Id == keyId, Context.RequestAborted);
+        if (apiKey is null || apiKey.RevokedAt is not null || (apiKey.ExpiresAt is not null && apiKey.ExpiresAt <= DateTimeOffset.UtcNow))
             return AuthenticateResult.Fail("API key inactive.");
 
         // Verify the exact key value via salted hash
-        var computed = ApiKeyHasher.HashWithSalt(presented, k.Salt);
-        if (!ApiKeyHasher.FixedTimeEquals(computed, k.Hash))
+        var computed = ApiKeyHasher.HashWithSalt(presented, apiKey.Salt);
+        if (!ApiKeyHasher.FixedTimeEquals(computed, apiKey.Hash))
             return AuthenticateResult.Fail("Invalid API key.");
 
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, k.Id.ToString()),
-            new Claim(ClaimTypes.Name, k.Name),
-            new Claim(ClaimTypes.Role, k.Role)
+            new Claim(ClaimTypes.NameIdentifier, apiKey.Id.ToString()),
+            new Claim(ClaimTypes.Name, apiKey.Name),
+            new Claim(ClaimTypes.Role, apiKey.Role)
         };
 
-        if (!string.IsNullOrWhiteSpace(k.Scopes))
+        if (!string.IsNullOrWhiteSpace(apiKey.Scopes))
         {
-            foreach (var s in k.Scopes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            foreach (var s in apiKey.Scopes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 claims.Add(new Claim("scope", s));
         }
+
+        if (apiKey.VendorId is not null)
+            claims.Add(new Claim(CustomClaimTypes.VendorId, apiKey.VendorId.ToString()!));
 
         var identity = new ClaimsIdentity(claims, Scheme);
         var principal = new ClaimsPrincipal(identity);

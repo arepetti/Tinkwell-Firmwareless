@@ -6,6 +6,8 @@ public sealed class AppDbContext : DbContext
 {
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
     public DbSet<Vendor> Vendors => Set<Vendor>();
+    public DbSet<Product> Products => Set<Product>();
+    public DbSet<Firmware> Firmwares => Set<Firmware>();
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     protected override void OnModelCreating(ModelBuilder b)
@@ -25,10 +27,35 @@ public sealed class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        b.Entity<Vendor>(e =>
+        b.Entity<Vendor>(entity =>
         {
-            e.HasKey(x => x.Id);
-            e.Property(x => x.Name).HasMaxLength(200);
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(200);
+        });
+
+        b.Entity<Product>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(200);
+            entity.Property(x => x.Model).HasMaxLength(200);
+
+            entity
+                .HasOne(a => a.Vendor)
+                .WithMany(v => v.Products)
+                .HasForeignKey(a => a.VendorId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<Firmware>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Version).HasMaxLength(200);
+
+            entity
+                .HasOne(a => a.Product)
+                .WithMany(v => v.Firmwares)
+                .HasForeignKey(a => a.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

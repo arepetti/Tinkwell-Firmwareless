@@ -3,6 +3,14 @@ using System.Text;
 
 namespace Tinkwell.Firmwareless.PublicRepository.Authentication;
 
+// An API key has this format:
+//   ak_<BASE64 ENCODED KEY>
+// Where:
+//   <BASE64_ENCODED_KEY> = <GUID><HMAC>
+//   <GUID> = an unique GUID, it's the ID of the key in the DB
+//   <HMAC> = an hash of <GUID> calculated using an "HMAC" secret as key
+// Note that the calculated API key is (obviously...) not stored in plain text in the DB,
+// it's store the hash (using randomly generated salt bytes for each API key), see ApiKeyHasher.Hash().
 static class ApiKeyFormat
 {
     public static string Generate(Guid keyId, ApiKeyOptions opts)
