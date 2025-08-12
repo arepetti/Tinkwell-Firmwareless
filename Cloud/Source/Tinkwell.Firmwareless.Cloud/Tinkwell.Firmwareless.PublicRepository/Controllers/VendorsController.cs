@@ -1,67 +1,70 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Tinkwell.Firmwareless.PublicRepository.Database;
+using Tinkwell.Firmwareless.PublicRepository.Repositories;
+using Tinkwell.Firmwareless.PublicRepository.Services.Queries;
 
 namespace Tinkwell.Firmwareless.PublicRepository.Controllers;
 
 [ApiController]
 [Route("api/v1/vendors")]
-public sealed class VendorsController : ControllerBase
+public sealed class VendorsController(ILogger<VendorsController> logger, VendorService service) : TinkwellControllerBase(logger)
 {
-    public VendorsController(AppDbContext db)
-    {
-        _db = db;
-    }
-
-    public record CreateVendorRequest(string Name);
-    public record VendorView(Guid Id, string Name, DateTimeOffset CreatedAt);
-
     [HttpPost]
     [Authorize(Policy = "Admin")]
-    public async Task<ActionResult<VendorView>> Create(CreateVendorRequest req, CancellationToken ct)
+    public async Task<ActionResult<VendorService.VendorView>> Create(VendorService.CreateRequest req, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(req.Name))
-            return BadRequest("Name is required.");
-
-        var id = Guid.NewGuid();
-        
-        var vendor = await _db.Vendors.Where(x => x.Name == req.Name).FirstOrDefaultAsync(ct);
-        if (vendor is not null)
-            return BadRequest("A vendor with the same name already exists.");
-
-        var entity = new Vendor
+        return await Try(async () =>
         {
-            Id = id,
-            Name = req.Name,
-            CreatedAt = DateTimeOffset.UtcNow,
-        };
-
-        _db.Vendors.Add(entity);
-        await _db.SaveChangesAsync(ct);
-
-        return CreatedAtAction(nameof(GetById), new { id = entity.Id },
-            new VendorView(entity.Id, entity.Name, entity.CreatedAt));
+            var entity = await _service.CreateAsync(User, new VendorService.CreateRequest(req.Name, req.Notes), ct);
+            return CreatedAtAction(nameof(Find), new { id = entity.Id }, entity);
+        });
     }
 
     [HttpGet]
     [Authorize(Policy = "Admin")]
-    public async Task<IEnumerable<VendorView>> List(CancellationToken ct)
-        => await _db.ApiKeys
-            .OrderByDescending(k => k.CreatedAt)
-            .Select(k => new VendorView(k.Id, k.Name, k.CreatedAt))
-            .ToListAsync(ct);
-
-    [HttpGet("{id:guid}")]
-    [Authorize(Policy = "Admin")]
-    public async Task<ActionResult<VendorView>> GetById(Guid id, CancellationToken ct)
+    public async Task<ActionResult<FindResponse<KeyService.KeyView>>> FindAll(
+        [FromQuery] int pageIndex = 0,
+        [FromQuery] int pageLength = 20,
+        [FromQuery] string? filter = null,
+        [FromQuery] string? sort = null,
+        CancellationToken ct = default)
     {
-        var k = await _db.Vendors.FindAsync([id], ct);
-        if (k is null)
-            return NotFound();
-
-        return new VendorView(k.Id, k.Name, k.CreatedAt);
+        return await Try(async () =>
+        {
+            var request = new FindRequest(pageIndex, pageLength, filter, sort);
+            return Ok(await _service.FindAllAsync(HttpContext.User, request, ct));
+        });
     }
 
-    private readonly AppDbContext _db;
+    [HttpGet("{id:guid}")]
+    [Authorize]
+    public async Task<ActionResult<KeyService.KeyView>> Find(Guid id, CancellationToken ct)
+    {
+        return await Try(async () =>
+        {
+            return Ok(await _service.FindAsync(HttpContext.User, id, ct));
+        });
+    }
+
+    [HttpPut]
+    [Authorize(Policy = "Admin")]
+    public async Task<ActionResult<VendorService.VendorView>> Update(VendorService.UpdateRequest req, CancellationToken ct)
+    {
+        return await Try(async () =>
+            Ok(await _service.UpdateAsync(User, new VendorService.UpdateRequest(req.Id, req.Name, req.Notes), ct))
+        );
+    }
+
+    [HttpDelete("{id:guid}")]
+    [Authorize(Policy = "Admin")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        return await Try(async () =>
+        {
+            await _service.DeleteAsync(HttpContext.User, id, ct);
+            return NoContent();
+        });
+    }
+
+    private readonly VendorService _service = service;
 }

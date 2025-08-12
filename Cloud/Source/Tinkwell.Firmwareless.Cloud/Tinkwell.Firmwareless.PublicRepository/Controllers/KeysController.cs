@@ -11,7 +11,7 @@ public sealed class KeysController(ILogger<KeysController> logger, KeyService se
 {
     [HttpPost]
     [Authorize]
-    public async Task<ActionResult<KeyService.KeyView>> Create(KeyService.CreateKeyRequest request, CancellationToken ct)
+    public async Task<ActionResult<KeyService.KeyView>> Create(KeyService.CreateRequest request, CancellationToken ct)
     {
         return await Try(async () =>
         {

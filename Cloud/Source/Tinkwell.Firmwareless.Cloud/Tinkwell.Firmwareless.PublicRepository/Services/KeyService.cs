@@ -1,6 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Azure.Core;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Data;
+using System.Diagnostics;
 using System.Security.Claims;
 using Tinkwell.Firmwareless.PublicRepository.Authentication;
 using Tinkwell.Firmwareless.PublicRepository.Database;
@@ -10,21 +12,22 @@ namespace Tinkwell.Firmwareless.PublicRepository.Repositories;
 
 #pragma warning disable CA2208 // Instantiate argument exceptions correctly
 
-public sealed class KeyService
+public sealed class KeyService : ServiceBase
 {
-    public KeyService(AppDbContext db, IOptions<ApiKeyOptions> opts)
+    public KeyService(AppDbContext db, IOptions<ApiKeyOptions> opts) : base(db)
     {
         _db = db;
         _opts = opts.Value;
     }
 
-    public sealed record CreateKeyRequest(Guid? VendorId, string Name, string Role, int DaysValid, string[] Scopes);
+    public sealed record CreateRequest(Guid? VendorId, string Name, string Role, int DaysValid, string[] Scopes);
 
     public sealed record KeyView(Guid Id, Guid? VendorId, string Name, string Role, string[] Scopes, DateTimeOffset CreatedAt, DateTimeOffset? ExpiresAt, DateTimeOffset? RevokedAt);
 
-    public async Task<KeyView> CreateAsync(ClaimsPrincipal user, CreateKeyRequest request, CancellationToken cancellationToken)
+    public async Task<KeyView> CreateAsync(ClaimsPrincipal user, CreateRequest request, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(user);
+        Debug.Assert(user is not null);
+        Debug.Assert(request is not null);
 
         var (role, scopes, vendorId) = user.GetScopesAndVendorId();
 
@@ -52,7 +55,7 @@ public sealed class KeyService
 
     public async Task<string> UnsafeCreateForAdminAsync(CancellationToken cancellationToken = default)
     {
-        var request = new CreateKeyRequest(
+        var request = new CreateRequest(
             VendorId: null,
             Name: "Bootstrapping Admin Key",
             Role: "Admin",
@@ -68,48 +71,20 @@ public sealed class KeyService
 
     public async Task<FindResponse<KeyView>> FindAllAsync(ClaimsPrincipal user, FindRequest request, CancellationToken cancellationToken)
     {
-        var (role, scopes, vendorId) = user.GetScopesAndVendorId();
+        Debug.Assert(user is not null);
 
-        if (role == UserRole.None)
-            throw new UnauthorizedAccessException("User must be authenticated to list API keys.");
-
-        if (!scopes.Contains(Scopes.KeyRead))
-            throw new ForbiddenAccessException("You do not have the permission to read API keys.");
-
-        if (request.PageIndex is not null && request.PageIndex < 0)
-            throw new ArgumentException("Page index must be greater than or equal to 0.", nameof(request.PageIndex));
-
-        if (request.PageLength is not null && request.PageLength <= 0)
-            throw new ArgumentException("Page length must be greater than 0.", nameof(request.PageIndex));
-
-        if (request.PageLength is not null && request.PageLength > FindRequest.MaximumPageLength)
-            throw new ArgumentException($"Page length must be less than {FindRequest.MaximumPageLength}.", nameof(request.PageIndex));
-
+        var (role, _, vendorId) = user.GetScopesAndVendorId();
         var query = _db.ApiKeys.AsNoTracking();
-
-        int pageIndex = request.PageIndex ?? 0;
-        int pageLength = request.PageLength ?? FindRequest.DefaultPageLength;
-
         if (role != UserRole.Admin)
             query = query.Where(x => x.VendorId == vendorId);
 
-        if (string.IsNullOrWhiteSpace(request.Sort))
-            query = query.ApplySorting(request.Sort);
-        else
-            query = query.OrderByDescending(x => x.CreatedAt);
-
-        var items = query
-            .ApplyFilters(request.Filter)
-            .Skip(pageIndex * pageLength)
-            .Take(pageLength)
-            .Select(EntityToView);
-
-        var total = await query.CountAsync(cancellationToken);
-        return new FindResponse<KeyView>(items.ToList(), total, pageIndex, pageLength);
+        return await FindAllAsync(user, Scopes.KeyRead, query, request, EntityToView, cancellationToken);
     }
 
     public async Task<KeyView> FindAsync(ClaimsPrincipal user, Guid id, CancellationToken cancellationToken)
     {
+        Debug.Assert(user is not null);
+        
         var (role, scopes, vendorId) = user.GetScopesAndVendorId();
 
         if (role == UserRole.None)
@@ -127,6 +102,8 @@ public sealed class KeyService
 
     public async Task RevokeAsync(ClaimsPrincipal user, Guid id, CancellationToken cancellationToken)
     {
+        Debug.Assert(user is not null);
+        
         var (role, scopes, vendorId) = user.GetScopesAndVendorId();
 
         if (role == UserRole.None)
@@ -145,6 +122,8 @@ public sealed class KeyService
 
     public async Task DeleteAsync(ClaimsPrincipal user, Guid id, CancellationToken cancellationToken)
     {
+        Debug.Assert(user is not null);
+        
         var (role, scopes, vendorId) = user.GetScopesAndVendorId();
 
         if (role == UserRole.None)
@@ -164,7 +143,7 @@ public sealed class KeyService
     private readonly AppDbContext _db;
     private readonly ApiKeyOptions _opts;
 
-    private async Task<(KeyView Result, string Plaintext)> CreateWithoutValidationAsync(CreateKeyRequest request, bool vendorSpecific, CancellationToken cancellationToken)
+    private async Task<(KeyView Result, string Plaintext)> CreateWithoutValidationAsync(CreateRequest request, bool vendorSpecific, CancellationToken cancellationToken)
     {
         var id = Guid.NewGuid();
         var plaintext = ApiKeyFormat.Generate(id, _opts);
@@ -210,22 +189,6 @@ public sealed class KeyService
         return apiKey;
     }
 
-    private async Task SaveChangesAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            await _db.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            throw new ConflictException();
-        }
-        catch (DbUpdateException e) when (e.InnerException is ConstraintException)
-        {
-            throw new ArgumentException(e.Message);
-        }
-    }
-
     private static KeyView EntityToView(ApiKey entity)
     {
         return new KeyView(
@@ -239,5 +202,3 @@ public sealed class KeyService
             entity.RevokedAt);
     }
 }
-
-#pragma warning restore CA2208 // Instantiate argument exceptions correctly
