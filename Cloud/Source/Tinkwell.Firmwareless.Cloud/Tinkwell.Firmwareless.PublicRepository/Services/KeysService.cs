@@ -51,6 +51,11 @@ public sealed class KeysService : ServiceBase
         if (request.DaysValid < 1 || request.DaysValid > 365)
             throw new ArgumentException("Validity must be between 1 and 365 days.", nameof(request.DaysValid));
 
+        // TODO: add validation for the scopes they want to include!!!
+        // For example: a vendor should NEVER have firmware.download_all in their API key and they can't have
+        // scopes to delete keys and manage vendors (it'll fail anyway but it shouldn't be possible to create a key
+        // with those scopes). Also: users cannot create an admin api key.
+
         var (result, plaintext) = await UnsafeCreateWithoutValidationAsync(request, vendorSpecific: true, cancellationToken);
         return EntityToView(result, plaintext);
     }
