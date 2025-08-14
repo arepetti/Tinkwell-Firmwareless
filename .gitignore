@@ -37,6 +37,7 @@ packages/
 
 # Tests
 CodeCoverage/
+coverage_report/
 *.coverage
 *.coveragexml
 [Tt]est[Rr]esult*/

@@ -12,7 +12,6 @@ public sealed class Product : EntityBase
     public string Name { get; set; } = "";
     public string Model { get; set; } = "";
     public ProductStatus Status { get; set; }
-    public DateTimeOffset UpdatedAt { get; set; }
 
     public Guid VendorId { get; set; }
     public required Vendor Vendor { get; set; }

@@ -24,6 +24,8 @@ static class Scopes
     public const string FirmwareUpdate = "firmware.update";
     public const string FirmwareDelete = "firmware.delete";
 
+    public const string FirmwareDownloadAll = "firmware.download_all";
+
     public static string[] All()
     {
         return typeof(Scopes)
@@ -42,7 +44,6 @@ static class Scopes
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .ToArray();
     }
-
 
     public static string ToString(string[] scopes)
         => string.Join(',', scopes.Select(s => s.Trim()).Where(s => !string.IsNullOrWhiteSpace(s)));

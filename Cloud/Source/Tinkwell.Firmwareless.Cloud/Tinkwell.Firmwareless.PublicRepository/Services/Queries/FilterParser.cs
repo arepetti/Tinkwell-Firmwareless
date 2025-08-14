@@ -24,6 +24,8 @@ static class FilterParser
                 if (parts.Length == 2)
                     list.Add(new FilterTerm(parts[0], FilterOp.Contains, parts[1]));
             }
+            else
+                throw new ArgumentException($"Invalid filter term: {raw}", nameof(filter));
         }
         return list;
     }

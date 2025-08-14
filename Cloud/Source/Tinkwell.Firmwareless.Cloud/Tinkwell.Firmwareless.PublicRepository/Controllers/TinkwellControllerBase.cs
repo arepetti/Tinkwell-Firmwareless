@@ -11,9 +11,9 @@ public abstract class TinkwellControllerBase(ILogger logger) : ControllerBase
         {
             return await func();
         }
-        catch (ForbiddenAccessException e)
+        catch (ForbiddenAccessException)
         {
-            return Forbid(e.Message);
+            return Forbid();
         }
         catch (UnauthorizedAccessException e)
         { 
@@ -30,6 +30,13 @@ public abstract class TinkwellControllerBase(ILogger logger) : ControllerBase
         catch (ConflictException e)
         {
             return Conflict(new ErrorResponse(e.Message));
+        }
+        catch (HttpRequestException e)
+        {
+            _logger.LogError(e, "Error calling another service: {Message}", e.Message);
+            return StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                new ErrorResponse($"The service is currently unavailable. Please try again later. Details: {e.Message}"));
         }
         catch (Exception e)
         {

@@ -1,4 +1,4 @@
-﻿namespace Tinkwell.Firmwareless.PublicRepository.Authentication;
+﻿namespace Tinkwell.Firmwareless.PublicRepository.Configuration;
 
 public sealed class ApiKeyOptions
 {

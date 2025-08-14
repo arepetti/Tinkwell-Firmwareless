@@ -1,9 +1,12 @@
 using Azure.Identity;
+using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Tinkwell.Firmwareless.PublicRepository.Authentication;
+using Tinkwell.Firmwareless.PublicRepository.Configuration;
 using Tinkwell.Firmwareless.PublicRepository.Database;
 using Tinkwell.Firmwareless.PublicRepository.Repositories;
+using Tinkwell.Firmwareless.PublicRepository.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,11 +33,24 @@ builder.Services.PostConfigure<ApiKeyOptions>(opt =>
         throw new InvalidOperationException("ApiKeys:HmacBytes must be between 4 and 32.");
 
     if (string.IsNullOrWhiteSpace(opt.KeyPrefix))
-        opt.KeyPrefix = "pr_";
+        opt.KeyPrefix = "ak_";
 });
 
-builder.Services.AddDbContext<AppDbContext>(o =>
-    o.UseNpgsql(builder.Configuration.GetConnectionString("tinkwell-firmwaredb-manifests")));
+builder.Services.Configure<FileUploadOptions>(builder.Configuration.GetSection("FileUploads"));
+
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddDbContext<AppDbContext>(x =>
+        x.UseNpgsql(builder.Configuration.GetConnectionString("tinkwell-firmwaredb-manifests")));
+
+    builder.Services.AddSingleton(serviceProvider =>
+    {
+        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+        var connectionString = configuration.GetConnectionString("tinkwell-firmwarestore")
+                 ?? throw new InvalidOperationException("Missing connection string 'tinkwell-firmwarestore'.");
+        return new BlobContainerClient(connectionString, "tinkwell-firmwarestore-assets");
+    });
+}
 
 builder.Services.AddAuthentication(ApiKeyAuthHandler.Scheme)
     .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthHandler>(ApiKeyAuthHandler.Scheme, _ => { });
@@ -42,10 +58,15 @@ builder.Services.AddAuthentication(ApiKeyAuthHandler.Scheme)
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("Admin", p => p.RequireRole("Admin"));
-    options.AddPolicy("Publisher", p => p.RequireClaim("scope", "firmware.write"));
 });
 
-builder.Services.AddScoped<KeyService>();
+builder.Services.AddHttpClient("tinkwell-compilation-server");
+builder.Services.AddScoped<IApiKeyValidator, ApiKeyValidationService>();
+builder.Services.AddScoped<KeysService>();
+builder.Services.AddScoped<VendorsService>();
+builder.Services.AddScoped<ProductsService>();
+builder.Services.AddScoped<FirmwaresService>();
+builder.Services.AddScoped<CompilationProxyService>();
 
 builder.Services.AddControllers();
 
@@ -54,15 +75,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     await app.ApplyMigrationsAsync(scope);
-
-    // Bootstrap Admin key, no expiration but temporary! It should be replaced with a proper key
-    // as soon as possible and then revoked. To use only for bootstrapping and for local testing.
-    var keyService = scope.ServiceProvider.GetRequiredService<KeyService>();
-    if (await keyService.HasAdminKeyAsync() == false)
-    {
-        var adminKey = await keyService.UnsafeCreateForAdminAsync();
-        Console.WriteLine($"[BOOTSTRAP] Admin API key (store securely): {adminKey}");
-    }
+    await app.AddProvisioningKeys(scope);
 }
 
 app.UseHttpsRedirection();

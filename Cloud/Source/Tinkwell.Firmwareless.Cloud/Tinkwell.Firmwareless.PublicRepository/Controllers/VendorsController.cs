@@ -7,11 +7,11 @@ namespace Tinkwell.Firmwareless.PublicRepository.Controllers;
 
 [ApiController]
 [Route("api/v1/vendors")]
-public sealed class VendorsController(ILogger<VendorsController> logger, VendorService service) : TinkwellControllerBase(logger)
+public sealed class VendorsController(ILogger<VendorsController> logger, VendorsService service) : TinkwellControllerBase(logger)
 {
     [HttpPost]
     [Authorize(Policy = "Admin")]
-    public async Task<ActionResult<VendorService.View>> Create(VendorService.CreateRequest req, CancellationToken ct)
+    public async Task<ActionResult<VendorsService.View>> Create(VendorsService.CreateRequest req, CancellationToken ct)
     {
         return await Try(async () =>
         {
@@ -22,7 +22,7 @@ public sealed class VendorsController(ILogger<VendorsController> logger, VendorS
 
     [HttpGet]
     [Authorize(Policy = "Admin")]
-    public async Task<ActionResult<FindResponse<VendorService.View>>> FindAll(
+    public async Task<ActionResult<FindResponse<VendorsService.View>>> FindAll(
         [FromQuery] int pageIndex = 0,
         [FromQuery] int pageLength = 20,
         [FromQuery] string? filter = null,
@@ -38,7 +38,7 @@ public sealed class VendorsController(ILogger<VendorsController> logger, VendorS
 
     [HttpGet("{id:guid}")]
     [Authorize]
-    public async Task<ActionResult<VendorService.View>> Find(Guid id, CancellationToken ct)
+    public async Task<ActionResult<VendorsService.View>> Find(Guid id, CancellationToken ct)
     {
         return await Try(async () =>
         {
@@ -48,7 +48,7 @@ public sealed class VendorsController(ILogger<VendorsController> logger, VendorS
 
     [HttpPut]
     [Authorize(Policy = "Admin")]
-    public async Task<ActionResult<VendorService.View>> Update(VendorService.UpdateRequest req, CancellationToken ct)
+    public async Task<ActionResult<VendorsService.View>> Update(VendorsService.UpdateRequest req, CancellationToken ct)
     {
         return await Try(async () =>
             Ok(await _service.UpdateAsync(User, req, ct))
@@ -66,5 +66,5 @@ public sealed class VendorsController(ILogger<VendorsController> logger, VendorS
         });
     }
 
-    private readonly VendorService _service = service;
+    private readonly VendorsService _service = service;
 }

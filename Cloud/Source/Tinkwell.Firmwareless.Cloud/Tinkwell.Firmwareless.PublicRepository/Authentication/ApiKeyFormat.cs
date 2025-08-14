@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
+using Tinkwell.Firmwareless.PublicRepository.Configuration;
 
 namespace Tinkwell.Firmwareless.PublicRepository.Authentication;
 

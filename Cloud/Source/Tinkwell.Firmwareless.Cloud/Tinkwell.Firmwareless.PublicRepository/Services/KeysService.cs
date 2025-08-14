@@ -1,10 +1,10 @@
-﻿using Azure.Core;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Data;
 using System.Diagnostics;
 using System.Security.Claims;
 using Tinkwell.Firmwareless.PublicRepository.Authentication;
+using Tinkwell.Firmwareless.PublicRepository.Configuration;
 using Tinkwell.Firmwareless.PublicRepository.Database;
 using Tinkwell.Firmwareless.PublicRepository.Services.Queries;
 
@@ -12,9 +12,9 @@ namespace Tinkwell.Firmwareless.PublicRepository.Repositories;
 
 #pragma warning disable CA2208 // Instantiate argument exceptions correctly
 
-public sealed class KeyService : ServiceBase
+public sealed class KeysService : ServiceBase
 {
-    public KeyService(AppDbContext db, IOptions<ApiKeyOptions> opts) : base(db)
+    public KeysService(AppDbContext db, IOptions<ApiKeyOptions> opts) : base(db)
     {
         _db = db;
         _opts = opts.Value;
@@ -22,7 +22,9 @@ public sealed class KeyService : ServiceBase
 
     public sealed record CreateRequest(Guid? VendorId, string Name, string Role, int DaysValid, string[] Scopes);
 
-    public sealed record View(Guid Id, Guid? VendorId, string Name, string Role, string[] Scopes, DateTimeOffset CreatedAt, DateTimeOffset? ExpiresAt, DateTimeOffset? RevokedAt);
+    public sealed record CreatePublisherRequest(Guid? VendorId);
+
+    public sealed record View(Guid Id, Guid? VendorId, string Name, string Role, string[] Scopes, string? Text, DateTimeOffset CreatedAt, DateTimeOffset? ExpiresAt, DateTimeOffset? RevokedAt);
 
     public async Task<View> CreateAsync(ClaimsPrincipal user, CreateRequest request, CancellationToken cancellationToken)
     {
@@ -49,8 +51,8 @@ public sealed class KeyService : ServiceBase
         if (request.DaysValid < 1 || request.DaysValid > 365)
             throw new ArgumentException("Validity must be between 1 and 365 days.", nameof(request.DaysValid));
 
-        var (result, _) = await CreateWithoutValidationAsync(request, vendorSpecific: true, cancellationToken);
-        return result;
+        var (result, plaintext) = await UnsafeCreateWithoutValidationAsync(request, vendorSpecific: true, cancellationToken);
+        return EntityToView(result, plaintext);
     }
 
     public async Task<string> UnsafeCreateForAdminAsync(CancellationToken cancellationToken = default)
@@ -59,10 +61,23 @@ public sealed class KeyService : ServiceBase
             VendorId: null,
             Name: "Bootstrapping Admin Key",
             Role: "Admin",
-            DaysValid: -1,
+            DaysValid: 3,
             Scopes: Scopes.All());
 
-        var (_, plaintext) = await CreateWithoutValidationAsync(request, vendorSpecific: false, cancellationToken);
+        var (_, plaintext) = await UnsafeCreateWithoutValidationAsync(request, vendorSpecific: false, cancellationToken);
+        return plaintext;
+    }
+
+    public async Task<string> UnsafeCreateForHubAsync(CancellationToken cancellationToken = default)
+    {
+        var request = new CreateRequest(
+            VendorId: null,
+            Name: "Generic Hub client",
+            Role: "User",
+            DaysValid: -1,
+            Scopes: [Scopes.FirmwareDownloadAll]);
+
+        var (_, plaintext) = await UnsafeCreateWithoutValidationAsync(request, vendorSpecific: false, cancellationToken);
         return plaintext;
     }
 
@@ -143,7 +158,7 @@ public sealed class KeyService : ServiceBase
     private readonly AppDbContext _db;
     private readonly ApiKeyOptions _opts;
 
-    private async Task<(View Result, string Plaintext)> CreateWithoutValidationAsync(CreateRequest request, bool vendorSpecific, CancellationToken cancellationToken)
+    private async Task<(ApiKey Result, string Plaintext)> UnsafeCreateWithoutValidationAsync(CreateRequest request, bool vendorSpecific, CancellationToken cancellationToken)
     {
         var id = Guid.NewGuid();
         var plaintext = ApiKeyFormat.Generate(id, _opts);
@@ -174,7 +189,7 @@ public sealed class KeyService : ServiceBase
         _db.ApiKeys.Add(entity);
         await SaveChangesAsync(cancellationToken);
 
-        return (EntityToView(entity), plaintext);
+        return (entity, plaintext);
     }
 
     private async Task<ApiKey?> TryFindAsync(UserRole role, Guid? vendorId, Guid id, CancellationToken cancellationToken)
@@ -189,7 +204,10 @@ public sealed class KeyService : ServiceBase
         return apiKey;
     }
 
-    private static View EntityToView(ApiKey entity)
+    private View EntityToView(ApiKey entity)
+        => EntityToView(entity, $"{_opts.KeyPrefix}*****");
+
+    private static View EntityToView(ApiKey entity, string? plaintext)
     {
         return new View(
             entity.Id,
@@ -197,6 +215,7 @@ public sealed class KeyService : ServiceBase
             entity.Name,
             entity.Role,
             Scopes.Parse(entity.Scopes),
+            plaintext,
             entity.CreatedAt,
             entity.ExpiresAt,
             entity.RevokedAt);

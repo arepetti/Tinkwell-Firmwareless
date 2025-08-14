@@ -7,11 +7,11 @@ namespace Tinkwell.Firmwareless.PublicRepository.Controllers;
 
 [ApiController]
 [Route("api/v1/products")]
-public sealed class ProductsController(ILogger<VendorsController> logger, ProductService service) : TinkwellControllerBase(logger)
+public sealed class ProductsController(ILogger<VendorsController> logger, ProductsService service) : TinkwellControllerBase(logger)
 {
     [HttpPost]
     [Authorize]
-    public async Task<ActionResult<ProductService.View>> Create(ProductService.CreateRequest req, CancellationToken ct)
+    public async Task<ActionResult<ProductsService.View>> Create(ProductsService.CreateRequest req, CancellationToken ct)
     {
         return await Try(async () =>
         {
@@ -22,7 +22,7 @@ public sealed class ProductsController(ILogger<VendorsController> logger, Produc
 
     [HttpGet]
     [Authorize]
-    public async Task<ActionResult<FindResponse<ProductService.View>>> FindAll(
+    public async Task<ActionResult<FindResponse<ProductsService.View>>> FindAll(
         [FromQuery] int pageIndex = 0,
         [FromQuery] int pageLength = 20,
         [FromQuery] string? filter = null,
@@ -38,7 +38,7 @@ public sealed class ProductsController(ILogger<VendorsController> logger, Produc
 
     [HttpGet("{id:guid}")]
     [Authorize]
-    public async Task<ActionResult<ProductService.View>> Find(Guid id, CancellationToken ct)
+    public async Task<ActionResult<ProductsService.View>> Find(Guid id, CancellationToken ct)
     {
         return await Try(async () =>
         {
@@ -48,7 +48,7 @@ public sealed class ProductsController(ILogger<VendorsController> logger, Produc
 
     [HttpPut]
     [Authorize]
-    public async Task<ActionResult<ProductService.View>> Update(ProductService.UpdateRequest req, CancellationToken ct)
+    public async Task<ActionResult<ProductsService.View>> Update(ProductsService.UpdateRequest req, CancellationToken ct)
     {
         return await Try(async () =>
             Ok(await _service.UpdateAsync(User, req, ct))
@@ -66,5 +66,5 @@ public sealed class ProductsController(ILogger<VendorsController> logger, Produc
         });
     }
 
-    private readonly ProductService _service = service;
+    private readonly ProductsService _service = service;
 }

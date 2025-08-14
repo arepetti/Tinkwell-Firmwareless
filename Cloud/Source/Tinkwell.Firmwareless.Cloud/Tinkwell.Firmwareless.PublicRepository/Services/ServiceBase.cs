@@ -44,9 +44,9 @@ public abstract class ServiceBase(AppDbContext db)
         int pageLength = request.PageLength ?? FindRequest.DefaultPageLength;
 
         if (string.IsNullOrWhiteSpace(request.Sort))
-            query = query.ApplySorting(request.Sort);
-        else
             query = query.OrderByDescending(x => x.CreatedAt);
+        else
+            query = query.ApplySorting(request.Sort);
 
         var items = query
             .ApplyFilters(request.Filter)

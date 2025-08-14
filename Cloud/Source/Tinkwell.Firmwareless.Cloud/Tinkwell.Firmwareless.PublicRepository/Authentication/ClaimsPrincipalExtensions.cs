@@ -16,10 +16,11 @@ static class ClaimsPrincipalExtensions
         if (user.Identity is not { IsAuthenticated: true })
             return (UserRole.None, [], null);
 
-        if (user.IsInRole("Admin"))
-            return (UserRole.Admin, [], null);
-
         var scopes = user.FindAll("scope").Select(c => c.Value).ToHashSet();
+
+        if (user.IsInRole("Admin"))
+            return (UserRole.Admin, scopes, null);
+
         var vendorIdClaim = user.FindFirst(CustomClaimTypes.VendorId)?.Value;
         if (vendorIdClaim is null)
             return (UserRole.None, scopes, null);

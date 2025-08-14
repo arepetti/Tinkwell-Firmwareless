@@ -7,11 +7,11 @@ namespace Tinkwell.Firmwareless.PublicRepository.Controllers;
 
 [ApiController]
 [Route("api/v1/keys")]
-public sealed class KeysController(ILogger<KeysController> logger, KeyService service) : TinkwellControllerBase(logger)
+public sealed class KeysController(ILogger<KeysController> logger, KeysService service) : TinkwellControllerBase(logger)
 {
     [HttpPost]
     [Authorize]
-    public async Task<ActionResult<KeyService.View>> Create(KeyService.CreateRequest request, CancellationToken ct)
+    public async Task<ActionResult<KeysService.View>> Create(KeysService.CreateRequest request, CancellationToken ct)
     {
         return await Try(async () =>
         {
@@ -22,7 +22,7 @@ public sealed class KeysController(ILogger<KeysController> logger, KeyService se
 
     [HttpGet]
     [Authorize]
-    public async Task<ActionResult<FindResponse<KeyService.View>>> FindAll(
+    public async Task<ActionResult<FindResponse<KeysService.View>>> FindAll(
         [FromQuery] int pageIndex = 0,
         [FromQuery] int pageLength = 20,
         [FromQuery] string? filter = null,
@@ -38,7 +38,7 @@ public sealed class KeysController(ILogger<KeysController> logger, KeyService se
 
     [HttpGet("{id:guid}")]
     [Authorize]
-    public async Task<ActionResult<KeyService.View>> Find(Guid id, CancellationToken ct)
+    public async Task<ActionResult<KeysService.View>> Find(Guid id, CancellationToken ct)
     {
         return await Try(async () =>
         {
@@ -68,5 +68,5 @@ public sealed class KeysController(ILogger<KeysController> logger, KeyService se
         });
     }
 
-    private readonly KeyService _service = service;
+    private readonly KeysService _service = service;
 }
