@@ -186,9 +186,7 @@ public sealed class FirmwaresService(ILogger<FirmwaresService> logger, AppDbCont
     {
         Debug.Assert(user is not null);
 
-        var (role, scopes, _) = user.GetScopesAndVendorId();
-        if (role == UserRole.None)
-            throw new UnauthorizedAccessException("User must be authenticated to use this resource.");
+        var (_, scopes, _) = user.GetScopesAndVendorId();
 
         if (!scopes.Contains(Scopes.FirmwareDownloadAll))
             throw new ForbiddenAccessException();

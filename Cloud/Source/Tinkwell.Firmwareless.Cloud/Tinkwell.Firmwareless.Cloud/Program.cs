@@ -31,25 +31,26 @@ var manifestsDb = pg.AddDatabase("tinkwell-firmwaredb-manifests");
 if (builder.Environment.IsDevelopment())
     pg = pg.WithBindMount(Path.Combine(dataRoot, "pgdata"), "/var/lib/postgresql/data");
 
-// Public repository
-var publicRepository = builder
-    .AddProject<Projects.Tinkwell_Firmwareless_PublicRepository>("tinkwell-public-repository")
-    .WithReference(assets)
-    .WithReference(manifestsDb)
-    .WithExternalHttpEndpoints();
-
 // Compilation service
 var wamrcCompiler = builder.AddDockerfile("wamrc-compiler", "../Tinkwell.Firmwareless.WamrcCompiler");
 
 var compilationServer = builder
     .AddProject<Projects.Tinkwell_Firmwareless_CompilationServer>("tinkwell-compilation-server")
     .WithReference(builds)
-    .WithReference(manifestsDb);
+    .WithHttpsEndpoint();
 
 if (wamrcCompiler.Resource.TryGetContainerImageName(out var compilerImageName))
     compilationServer.WithEnvironment("CompilerImageName", compilerImageName);
 else
     throw new InvalidOperationException("Cannot obtain the compiler image name from the wamrc-compiler project.");
+
+// Public repository
+var publicRepository = builder
+    .AddProject<Projects.Tinkwell_Firmwareless_PublicRepository>("tinkwell-public-repository")
+    .WithReference(assets)
+    .WithReference(manifestsDb)
+    .WithReference(compilationServer)
+    .WithExternalHttpEndpoints();
 
 // Done, run it!
 builder.Build().Run();

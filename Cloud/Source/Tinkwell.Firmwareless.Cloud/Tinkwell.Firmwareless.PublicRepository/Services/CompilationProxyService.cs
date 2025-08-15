@@ -6,7 +6,7 @@ public class CompilationProxyService
 {
     public sealed record Request(string BlobName, string Architecture);
 
-    public CompilationProxyService(IHttpClientFactory factory)
+    public CompilationProxyService(IHttpClientFactory factory, ILogger<CompilationProxyService> logger)
     {
         _httpClient = factory.CreateClient("tinkwell-compilation-server");
     }

@@ -10,7 +10,8 @@ namespace Tinkwell.Firmwareless.PublicRepository.Controllers;
 
 [ApiController]
 [Route("api/v1/firmwares")]
-public sealed class FirmwaresController(ILogger<FirmwaresController> logger, FirmwaresService service) : TinkwellControllerBase(logger)
+public sealed class FirmwaresController(ILogger<FirmwaresController> logger, FirmwaresService service, CompilationProxyService compilationProxy)
+    : TinkwellControllerBase(logger)
 {
     public sealed record DownloadRequest(Guid VendorId, Guid ProductId, FirmwareType Type, string HardwareVersion, string HardwareArchitecture);
 
@@ -74,26 +75,28 @@ public sealed class FirmwaresController(ILogger<FirmwaresController> logger, Fir
 
     [HttpPost("download")]
     [Authorize]
-    public async Task<IActionResult> Download(
-        [FromBody] DownloadRequest request,
-        [FromServices] CompilationProxyService proxy,
-        CancellationToken ct)
+    public async Task<IActionResult> Download([FromBody] DownloadRequest request, CancellationToken ct)
     {
         return await Try(async () =>
         {
+            _logger.LogInformation("Download request for firmware: VendorId={VendorId}, ProductId={ProductId}, Type={Type}, HardwareVersion={HardwareVersion}, HardwareArchitecture={HardwareArchitecture}",
+                request.VendorId, request.ProductId, request.Type, request.HardwareVersion, request.HardwareArchitecture);
             var blobName = await _service.GetBlobName(
                 HttpContext.User,
                 new FirmwaresService.ResolveBlobNameRequest(request.VendorId, request.ProductId, request.Type, request.HardwareVersion),
                 ct);
 
+            _logger.LogInformation("Compiling {Name} for HardwareArchitecture={HardwareArchitecture}", blobName, request.HardwareArchitecture);
             var compilationRequest = new CompilationProxyService.Request(blobName, request.HardwareArchitecture);
-            var stream = await proxy.CompileAsync(compilationRequest, ct);
+            var stream = await _compilationProxy.CompileAsync(compilationRequest, ct);
 
             Response.Headers.CacheControl = "no-store";
             return File(stream, MediaTypeNames.Application.Octet, blobName);
         });
     }
 
+    private readonly ILogger<FirmwaresController> _logger = logger;
     private readonly FirmwaresService _service = service;
+    private readonly CompilationProxyService _compilationProxy = compilationProxy;
 
 }

@@ -92,3 +92,16 @@ Content-Type: application/octet-stream
 ### Step 6: list available firmwares
 GET {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/api/v1/firmwares
 X-Api-Key: {{UserApiKey}}
+
+### Step 7: download the compiled firmware
+POST {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/api/v1/firmwares/download
+X-Api-Key: {{HubApiKey}}
+Content-Type: application/json
+
+{
+  "vendorId": "{{VendorId}}",
+  "productId": "{{ProductId}}",
+  "type": "Firmlet",
+  "hardwareVersion": "1.0",
+  "hardwareArchitecture": "x86_64"
+}
