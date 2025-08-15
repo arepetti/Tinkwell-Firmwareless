@@ -3,5 +3,5 @@
 public sealed record FindResponse<T>(IReadOnlyList<T> Items, int TotalCount, int PageIndex, int PageLength)
 {
     public bool HasMore
-        => PageIndex * PageLength < TotalCount;
+        => (PageIndex + 1) < TotalCount / PageLength;
 }

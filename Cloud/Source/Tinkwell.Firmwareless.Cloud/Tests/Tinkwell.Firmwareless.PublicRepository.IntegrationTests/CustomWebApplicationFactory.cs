@@ -4,9 +4,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.Linq;
+using System.Text.Json.Serialization;
 using Tinkwell.Firmwareless.PublicRepository.Database;
-using Tinkwell.Firmwareless.PublicRepository.Services;
 using Tinkwell.Firmwareless.PublicRepository.IntegrationTests.Fakes;
+using Tinkwell.Firmwareless.PublicRepository.Services;
 using Tinkwell.Firmwareless.PublicRepository.UnitTests.Fakes;
 
 namespace Tinkwell.Firmwareless.PublicRepository.IntegrationTests;
@@ -37,6 +38,11 @@ public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProg
 
             services.AddSingleton<CompilationProxyService, FakeCompilationProxyService>();
             services.AddSingleton<Azure.Storage.Blobs.BlobContainerClient, FakeBlobContainerClient>();
+
+            services.PostConfigure<Microsoft.AspNetCore.Http.Json.JsonOptions>(o =>
+            {
+                o.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            });
 
             // Ensure the database is created.
             var sp = services.BuildServiceProvider();

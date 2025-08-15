@@ -41,6 +41,7 @@ public sealed class ProductsService(AppDbContext db) : ServiceBase(db)
             Id = Guid.NewGuid(),
             Name = request.Name,
             Model = request.Model,
+            Status = request.Status,
             CreatedAt = DateTimeOffset.UtcNow,
             Vendor = vendor,
         };

@@ -2,8 +2,10 @@ using Azure.Identity;
 using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
 using Tinkwell.Firmwareless.PublicRepository.Authentication;
 using Tinkwell.Firmwareless.PublicRepository.Configuration;
+using Tinkwell.Firmwareless.PublicRepository.Controllers;
 using Tinkwell.Firmwareless.PublicRepository.Database;
 using Tinkwell.Firmwareless.PublicRepository.Repositories;
 using Tinkwell.Firmwareless.PublicRepository.Services;
@@ -46,8 +48,8 @@ if (!builder.Environment.IsEnvironment("Testing"))
     builder.Services.AddSingleton(serviceProvider =>
     {
         var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-        var connectionString = configuration.GetConnectionString("tinkwell-firmwarestore")
-                 ?? throw new InvalidOperationException("Missing connection string 'tinkwell-firmwarestore'.");
+        var connectionString = configuration.GetConnectionString("tinkwell-firmwarestore-assets")
+                 ?? throw new InvalidOperationException("Missing connection string 'tinkwell-firmwarestore-assets'.");
         return new BlobContainerClient(connectionString, "tinkwell-firmwarestore-assets");
     });
 }
@@ -68,7 +70,13 @@ builder.Services.AddScoped<ProductsService>();
 builder.Services.AddScoped<FirmwaresService>();
 builder.Services.AddScoped<CompilationProxyService>();
 
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers()
+    .AddJsonOptions(options =>
+    {
+        foreach (var c in JsonDefaults.Options.Converters)
+            options.JsonSerializerOptions.Converters.Add(c);
+    });
 
 var app = builder.Build();
 

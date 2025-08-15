@@ -12,7 +12,7 @@ namespace Tinkwell.Firmwareless.PublicRepository.Repositories;
 
 #pragma warning disable CA2208 // Instantiate argument exceptions correctly
 
-public sealed class FirmwaresService(AppDbContext db, BlobContainerClient blob, IOptions<FileUploadOptions> uploadOpts) : ServiceBase(db)
+public sealed class FirmwaresService(ILogger<FirmwaresService> logger, AppDbContext db, BlobContainerClient blob, IOptions<FileUploadOptions> uploadOpts) : ServiceBase(db)
 {
     public sealed record CreateRequest(Guid ProductId, string Version, string Compatibility, string Author, string Copyright, string ReleaseNotesUrl, FirmwareType Type, FirmwareStatus Status, IFormFile File);
 
@@ -54,7 +54,7 @@ public sealed class FirmwaresService(AppDbContext db, BlobContainerClient blob, 
         if (currentFirmware is not null)
         {
             var publishingNewerVersion = new FirmwareVersion.VersionStringComparer()
-                .Compare(currentFirmware.Version, request.Version) > 0;
+                .Compare(currentFirmware.Version, request.Version) < 0;
 
             if (!publishingNewerVersion && currentFirmware.Compatibility.Equals(request.Compatibility, StringComparison.InvariantCulture))
             {
@@ -204,6 +204,7 @@ public sealed class FirmwaresService(AppDbContext db, BlobContainerClient blob, 
         return GetBlobName(firmware);
     }
 
+    private readonly ILogger<FirmwaresService> _logger = logger;
     private readonly AppDbContext _db = db;
     private readonly BlobContainerClient _blob = blob;
     private readonly FileUploadOptions _uploadOpts = uploadOpts.Value;
@@ -248,7 +249,11 @@ public sealed class FirmwaresService(AppDbContext db, BlobContainerClient blob, 
 
     private async Task<string> UploadAsync(Firmware firmware, Stream stream, CancellationToken cancellationToken)
     {
-        var blobClient = _blob.GetBlobClient(GetBlobName(firmware));
+        string blobName = GetBlobName(firmware);
+        _logger.LogInformation("Uploading firmware {FirmwareId} to blob storage as {BlobName}.", firmware.Id, blobName);
+
+        await _blob.CreateIfNotExistsAsync(cancellationToken: cancellationToken);
+        var blobClient = _blob.GetBlobClient(blobName);
 
         await blobClient.UploadAsync(stream, overwrite: true, cancellationToken);
         return blobClient.Uri.ToString();

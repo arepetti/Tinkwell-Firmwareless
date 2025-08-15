@@ -16,7 +16,7 @@ public class CompilationProxyService
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(TimeSpan.FromMinutes(1)); // Hard-coded 1 minute for now
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "api/v1/compiler")
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "api/v1/compiler/compile")
         {
             Content = JsonContent.Create(request)
         };

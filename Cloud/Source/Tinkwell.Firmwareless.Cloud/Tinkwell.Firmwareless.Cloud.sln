@@ -20,6 +20,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tinkwell.Firmwareless.Publi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tinkwell.Firmwareless.PublicRepository.IntegrationTests", "Tests\Tinkwell.Firmwareless.PublicRepository.IntegrationTests\Tinkwell.Firmwareless.PublicRepository.IntegrationTests.csproj", "{2A178DC8-3330-4DC3-A95D-9771AB4FA06B}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tinkwell.Firmwareless.WamrcCompiler", "Tinkwell.Firmwareless.WamrcCompiler", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+	ProjectSection(SolutionItems) = preProject
+		Tinkwell.Firmwareless.WamrcCompiler\Dockerfile = Tinkwell.Firmwareless.WamrcCompiler\Dockerfile
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

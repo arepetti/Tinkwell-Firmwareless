@@ -28,15 +28,17 @@ public class FirmwaresControllerTests : IClassFixture<CustomWebApplicationFactor
         var (userKey, vendorId, productId) = await CreateUserKeyVendorAndProduct(scopes: [Scopes.FirmwareCreate]);
         client.DefaultRequestHeaders.Add(ApiKeyAuthHandler.HeaderName, userKey);
 
-        using var content = new MultipartFormDataContent();
-        content.Add(new StringContent(productId.ToString()), "ProductId");
-        content.Add(new StringContent("1.0.0"), "Version");
-        content.Add(new StringContent("esp32"), "Compatibility");
-        content.Add(new StringContent("Test Author"), "Author");
-        content.Add(new StringContent("Test Copyright"), "Copyright");
-        content.Add(new StringContent("http://notes.url"), "ReleaseNotesUrl");
-        content.Add(new StringContent(FirmwareType.Firmlet.ToString()), "Type");
-        content.Add(new StringContent(FirmwareStatus.Release.ToString()), "Status");
+        using var content = new MultipartFormDataContent
+        {
+            { new StringContent(productId.ToString()), "ProductId" },
+            { new StringContent("1.0.0"), "Version" },
+            { new StringContent("esp32"), "Compatibility" },
+            { new StringContent("Test Author"), "Author" },
+            { new StringContent("Test Copyright"), "Copyright" },
+            { new StringContent("http://notes.url"), "ReleaseNotesUrl" },
+            { new StringContent(FirmwareType.Firmlet.ToString()), "Type" },
+            { new StringContent(FirmwareStatus.Release.ToString()), "Status" }
+        };
         var fileContent = new ByteArrayContent(Encoding.UTF8.GetBytes("fake firmware file"));
         fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
         content.Add(fileContent, "File", "firmware.bin");
@@ -58,15 +60,17 @@ public class FirmwaresControllerTests : IClassFixture<CustomWebApplicationFactor
         client.DefaultRequestHeaders.Add(ApiKeyAuthHandler.HeaderName, userKey);
 
         // Create a firmware to download
-        using var setupContent = new MultipartFormDataContent();
-        setupContent.Add(new StringContent(productId.ToString()), "ProductId");
-        setupContent.Add(new StringContent("1.2.3"), "Version");
-        setupContent.Add(new StringContent("esp32"), "Compatibility");
-        setupContent.Add(new StringContent("Author"), "Author");
-        setupContent.Add(new StringContent("Copyright"), "Copyright");
-        setupContent.Add(new StringContent("notes.url"), "ReleaseNotesUrl");
-        setupContent.Add(new StringContent(FirmwareType.Firmlet.ToString()), "Type");
-        setupContent.Add(new StringContent(FirmwareStatus.Release.ToString()), "Status");
+        using var setupContent = new MultipartFormDataContent
+        {
+            { new StringContent(productId.ToString()), "ProductId" },
+            { new StringContent("1.2.3"), "Version" },
+            { new StringContent("esp32"), "Compatibility" },
+            { new StringContent("Author"), "Author" },
+            { new StringContent("Copyright"), "Copyright" },
+            { new StringContent("notes.url"), "ReleaseNotesUrl" },
+            { new StringContent(FirmwareType.Firmlet.ToString()), "Type" },
+            { new StringContent(FirmwareStatus.Release.ToString()), "Status" }
+        };
         var setupFileContent = new ByteArrayContent(Encoding.UTF8.GetBytes("real firmware"));
         setupFileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
         setupContent.Add(setupFileContent, "File", "firmware.bin");
@@ -118,15 +122,17 @@ public class FirmwaresControllerTests : IClassFixture<CustomWebApplicationFactor
         client.DefaultRequestHeaders.Add(ApiKeyAuthHandler.HeaderName, userKey);
 
         // Create a firmware to ensure there's data
-        using var setupContent = new MultipartFormDataContent();
-        setupContent.Add(new StringContent(productId.ToString()), "ProductId");
-        setupContent.Add(new StringContent("1.0.0"), "Version");
-        setupContent.Add(new StringContent("esp32"), "Compatibility");
-        setupContent.Add(new StringContent("Author"), "Author");
-        setupContent.Add(new StringContent("Copyright"), "Copyright");
-        setupContent.Add(new StringContent("notes.url"), "ReleaseNotesUrl");
-        setupContent.Add(new StringContent(FirmwareType.Firmlet.ToString()), "Type");
-        setupContent.Add(new StringContent(FirmwareStatus.Release.ToString()), "Status");
+        using var setupContent = new MultipartFormDataContent
+        {
+            { new StringContent(productId.ToString()), "ProductId" },
+            { new StringContent("1.0.0"), "Version" },
+            { new StringContent("esp32"), "Compatibility" },
+            { new StringContent("Author"), "Author" },
+            { new StringContent("Copyright"), "Copyright" },
+            { new StringContent("notes.url"), "ReleaseNotesUrl" },
+            { new StringContent(FirmwareType.Firmlet.ToString()), "Type" },
+            { new StringContent(FirmwareStatus.Release.ToString()), "Status" }
+        };
         var setupFileContent = new ByteArrayContent(Encoding.UTF8.GetBytes("real firmware"));
         setupFileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
         setupContent.Add(setupFileContent, "File", "firmware.bin");
@@ -139,7 +145,7 @@ public class FirmwaresControllerTests : IClassFixture<CustomWebApplicationFactor
         // Assert
         response.EnsureSuccessStatusCode();
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadFromJsonAsync<Services.Queries.FindResponse<FirmwaresService.View>>();
+        var result = await response.Content.ReadFromJsonAsync<Services.Queries.FindResponse<FirmwaresService.View>>(JsonDefaults.Options);
         result.Should().NotBeNull();
         result?.Items.Should().NotBeEmpty();
     }
@@ -153,21 +159,23 @@ public class FirmwaresControllerTests : IClassFixture<CustomWebApplicationFactor
         client.DefaultRequestHeaders.Add(ApiKeyAuthHandler.HeaderName, userKey);
 
         // Create a firmware to find
-        using var setupContent = new MultipartFormDataContent();
-        setupContent.Add(new StringContent(productId.ToString()), "ProductId");
-        setupContent.Add(new StringContent("1.0.0"), "Version");
-        setupContent.Add(new StringContent("esp32"), "Compatibility");
-        setupContent.Add(new StringContent("Author"), "Author");
-        setupContent.Add(new StringContent("Copyright"), "Copyright");
-        setupContent.Add(new StringContent("notes.url"), "ReleaseNotesUrl");
-        setupContent.Add(new StringContent(FirmwareType.Firmlet.ToString()), "Type");
-        setupContent.Add(new StringContent(FirmwareStatus.Release.ToString()), "Status");
+        using var setupContent = new MultipartFormDataContent
+        {
+            { new StringContent(productId.ToString()), "ProductId" },
+            { new StringContent("1.0.0"), "Version" },
+            { new StringContent("esp32"), "Compatibility" },
+            { new StringContent("Author"), "Author" },
+            { new StringContent("Copyright"), "Copyright" },
+            { new StringContent("notes.url"), "ReleaseNotesUrl" },
+            { new StringContent(FirmwareType.Firmlet.ToString()), "Type" },
+            { new StringContent(FirmwareStatus.Release.ToString()), "Status" }
+        };
         var setupFileContent = new ByteArrayContent(Encoding.UTF8.GetBytes("real firmware"));
         setupFileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
         setupContent.Add(setupFileContent, "File", "firmware.bin");
         var setupResponse = await client.PostAsync("/api/v1/firmwares", setupContent);
         setupResponse.EnsureSuccessStatusCode();
-        var createdFirmware = await setupResponse.Content.ReadFromJsonAsync<FirmwaresService.View>();
+        var createdFirmware = await setupResponse.Content.ReadFromJsonAsync<FirmwaresService.View>(JsonDefaults.Options);
 
         // Act
         var response = await client.GetAsync($"/api/v1/firmwares/{createdFirmware!.Id}");
@@ -175,7 +183,7 @@ public class FirmwaresControllerTests : IClassFixture<CustomWebApplicationFactor
         // Assert
         response.EnsureSuccessStatusCode();
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadFromJsonAsync<FirmwaresService.View>();
+        var result = await response.Content.ReadFromJsonAsync<FirmwaresService.View>(JsonDefaults.Options);
         result.Should().NotBeNull();
         result?.Id.Should().Be(createdFirmware.Id);
     }
@@ -202,42 +210,6 @@ public class FirmwaresControllerTests : IClassFixture<CustomWebApplicationFactor
     }
 
     [Fact]
-    public async Task Delete_Firmware_AsUser_ShouldBeForbidden()
-    {
-        // Arrange
-        var client = _factory.CreateClient();
-        var (userKey, vendorId, productId) = await CreateUserKeyVendorAndProduct(scopes: [Scopes.FirmwareCreate, Scopes.FirmwareRead, Scopes.FirmwareDelete]);
-        client.DefaultRequestHeaders.Add(ApiKeyAuthHandler.HeaderName, userKey);
-
-        // Create a firmware to attempt to delete
-        using var setupContent = new MultipartFormDataContent();
-        setupContent.Add(new StringContent(productId.ToString()), "ProductId");
-        setupContent.Add(new StringContent("1.0.0"), "Version");
-        setupContent.Add(new StringContent("esp32"), "Compatibility");
-        setupContent.Add(new StringContent("Author"), "Author");
-        setupContent.Add(new StringContent("Copyright"), "Copyright");
-        setupContent.Add(new StringContent("notes.url"), "ReleaseNotesUrl");
-        setupContent.Add(new StringContent(FirmwareType.Firmlet.ToString()), "Type");
-        setupContent.Add(new StringContent(FirmwareStatus.Release.ToString()), "Status");
-        var setupFileContent = new ByteArrayContent(Encoding.UTF8.GetBytes("real firmware"));
-        setupFileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
-        setupContent.Add(setupFileContent, "File", "firmware.bin");
-        var setupResponse = await client.PostAsync("/api/v1/firmwares", setupContent);
-        setupResponse.EnsureSuccessStatusCode();
-        var createdFirmware = await setupResponse.Content.ReadFromJsonAsync<FirmwaresService.View>();
-
-        // Act
-        var response = await client.DeleteAsync($"/api/v1/firmwares/{createdFirmware!.Id}");
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-
-        // Verify it's NOT deleted
-        var getResponse = await client.GetAsync($"/api/v1/firmwares/{createdFirmware.Id}");
-        getResponse.StatusCode.Should().Be(HttpStatusCode.OK); // Should still exist
-    }
-
-    [Fact]
     public async Task Update_FirmwareStatus_AsAdmin_ShouldSucceed()
     {
         // Arrange
@@ -246,21 +218,23 @@ public class FirmwaresControllerTests : IClassFixture<CustomWebApplicationFactor
         client.DefaultRequestHeaders.Add(ApiKeyAuthHandler.HeaderName, adminKey);
 
         // Create a firmware to update
-        using var setupContent = new MultipartFormDataContent();
-        setupContent.Add(new StringContent(productId.ToString()), "ProductId");
-        setupContent.Add(new StringContent("1.0.0"), "Version");
-        setupContent.Add(new StringContent("esp32"), "Compatibility");
-        setupContent.Add(new StringContent("Author"), "Author");
-        setupContent.Add(new StringContent("Copyright"), "Copyright");
-        setupContent.Add(new StringContent("notes.url"), "ReleaseNotesUrl");
-        setupContent.Add(new StringContent(FirmwareType.Firmlet.ToString()), "Type");
-        setupContent.Add(new StringContent(FirmwareStatus.Release.ToString()), "Status");
+        using var setupContent = new MultipartFormDataContent
+        {
+            { new StringContent(productId.ToString()), "ProductId" },
+            { new StringContent("1.0.0"), "Version" },
+            { new StringContent("esp32"), "Compatibility" },
+            { new StringContent("Author"), "Author" },
+            { new StringContent("Copyright"), "Copyright" },
+            { new StringContent("notes.url"), "ReleaseNotesUrl" },
+            { new StringContent(FirmwareType.Firmlet.ToString()), "Type" },
+            { new StringContent(FirmwareStatus.Release.ToString()), "Status" }
+        };
         var setupFileContent = new ByteArrayContent(Encoding.UTF8.GetBytes("real firmware"));
         setupFileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
         setupContent.Add(setupFileContent, "File", "firmware.bin");
         var setupResponse = await client.PostAsync("/api/v1/firmwares", setupContent);
         setupResponse.EnsureSuccessStatusCode();
-        var createdFirmware = await setupResponse.Content.ReadFromJsonAsync<FirmwaresService.View>();
+        var createdFirmware = await setupResponse.Content.ReadFromJsonAsync<FirmwaresService.View>(JsonDefaults.Options);
 
         var updateRequest = new FirmwaresService.UpdateRequest(createdFirmware!.Id, FirmwareStatus.Deprecated);
 
@@ -270,7 +244,7 @@ public class FirmwaresControllerTests : IClassFixture<CustomWebApplicationFactor
         // Assert
         response.EnsureSuccessStatusCode();
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var updatedFirmware = await response.Content.ReadFromJsonAsync<FirmwaresService.View>();
+        var updatedFirmware = await response.Content.ReadFromJsonAsync<FirmwaresService.View>(JsonDefaults.Options);
         updatedFirmware.Should().NotBeNull();
         updatedFirmware?.Status.Should().Be(FirmwareStatus.Deprecated);
     }
@@ -283,15 +257,17 @@ public class FirmwaresControllerTests : IClassFixture<CustomWebApplicationFactor
         var (userKey, vendorId, productId) = await CreateUserKeyVendorAndProduct(scopes: [Scopes.FirmwareCreate]);
         client.DefaultRequestHeaders.Add(ApiKeyAuthHandler.HeaderName, userKey);
 
-        using var content = new MultipartFormDataContent();
-        content.Add(new StringContent(productId.ToString()), "ProductId");
-        content.Add(new StringContent("1.0.0"), "Version");
-        content.Add(new StringContent("esp32"), "Compatibility");
-        content.Add(new StringContent("Test Author"), "Author");
-        content.Add(new StringContent("Test Copyright"), "Copyright");
-        content.Add(new StringContent("http://notes.url"), "ReleaseNotesUrl");
-        content.Add(new StringContent(FirmwareType.Firmlet.ToString()), "Type");
-        content.Add(new StringContent(FirmwareStatus.Release.ToString()), "Status");
+        using var content = new MultipartFormDataContent
+        {
+            { new StringContent(productId.ToString()), "ProductId" },
+            { new StringContent("1.0.0"), "Version" },
+            { new StringContent("esp32"), "Compatibility" },
+            { new StringContent("Test Author"), "Author" },
+            { new StringContent("Test Copyright"), "Copyright" },
+            { new StringContent("http://notes.url"), "ReleaseNotesUrl" },
+            { new StringContent(FirmwareType.Firmlet.ToString()), "Type" },
+            { new StringContent(FirmwareStatus.Release.ToString()), "Status" }
+        };
         var largeFileContent = new ByteArrayContent(new byte[17 * 1024 * 1024]); // 17MB file
         largeFileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
         content.Add(largeFileContent, "File", "large_firmware.bin");
@@ -314,15 +290,17 @@ public class FirmwaresControllerTests : IClassFixture<CustomWebApplicationFactor
         var (userKey, vendorId, productId) = await CreateUserKeyVendorAndProduct(scopes: [Scopes.FirmwareCreate]);
         client.DefaultRequestHeaders.Add(ApiKeyAuthHandler.HeaderName, userKey);
 
-        using var content = new MultipartFormDataContent();
-        content.Add(new StringContent(productId.ToString()), "ProductId");
-        content.Add(new StringContent("1.0.0"), "Version");
-        content.Add(new StringContent("esp32"), "Compatibility");
-        content.Add(new StringContent("Test Author"), "Author");
-        content.Add(new StringContent("Test Copyright"), "Copyright");
-        content.Add(new StringContent("http://notes.url"), "ReleaseNotesUrl");
-        content.Add(new StringContent(FirmwareType.Firmlet.ToString()), "Type");
-        content.Add(new StringContent(FirmwareStatus.Release.ToString()), "Status");
+        using var content = new MultipartFormDataContent
+        {
+            { new StringContent(productId.ToString()), "ProductId" },
+            { new StringContent("1.0.0"), "Version" },
+            { new StringContent("esp32"), "Compatibility" },
+            { new StringContent("Test Author"), "Author" },
+            { new StringContent("Test Copyright"), "Copyright" },
+            { new StringContent("http://notes.url"), "ReleaseNotesUrl" },
+            { new StringContent(FirmwareType.Firmlet.ToString()), "Type" },
+            { new StringContent(FirmwareStatus.Release.ToString()), "Status" }
+        };
         var invalidFileContent = new ByteArrayContent(Encoding.UTF8.GetBytes("fake firmware file"));
         invalidFileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json"); // Invalid content type
         content.Add(invalidFileContent, "File", "firmware.json");
@@ -345,15 +323,17 @@ public class FirmwaresControllerTests : IClassFixture<CustomWebApplicationFactor
         var (userKey, vendorId, productId) = await CreateUserKeyVendorAndProduct(scopes: [Scopes.FirmwareCreate]);
         client.DefaultRequestHeaders.Add(ApiKeyAuthHandler.HeaderName, userKey);
 
-        using var content = new MultipartFormDataContent();
-        content.Add(new StringContent(productId.ToString()), "ProductId");
-        content.Add(new StringContent("1.0.0/../invalid"), "Version"); // Invalid version string
-        content.Add(new StringContent("esp32"), "Compatibility");
-        content.Add(new StringContent("Test Author"), "Author");
-        content.Add(new StringContent("Test Copyright"), "Copyright");
-        content.Add(new StringContent("http://notes.url"), "ReleaseNotesUrl");
-        content.Add(new StringContent(FirmwareType.Firmlet.ToString()), "Type");
-        content.Add(new StringContent(FirmwareStatus.Release.ToString()), "Status");
+        using var content = new MultipartFormDataContent
+        {
+            { new StringContent(productId.ToString()), "ProductId" },
+            { new StringContent("1.0.0/../invalid"), "Version" }, // Invalid version string
+            { new StringContent("esp32"), "Compatibility" },
+            { new StringContent("Test Author"), "Author" },
+            { new StringContent("Test Copyright"), "Copyright" },
+            { new StringContent("http://notes.url"), "ReleaseNotesUrl" },
+            { new StringContent(FirmwareType.Firmlet.ToString()), "Type" },
+            { new StringContent(FirmwareStatus.Release.ToString()), "Status" }
+        };
         var fileContent = new ByteArrayContent(Encoding.UTF8.GetBytes("fake firmware file"));
         fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
         content.Add(fileContent, "File", "firmware.bin");
@@ -376,15 +356,17 @@ public class FirmwaresControllerTests : IClassFixture<CustomWebApplicationFactor
         var (userKey, vendorId, productId) = await CreateUserKeyVendorAndProduct(scopes: [Scopes.FirmwareCreate]);
         client.DefaultRequestHeaders.Add(ApiKeyAuthHandler.HeaderName, userKey);
 
-        using var content = new MultipartFormDataContent();
-        content.Add(new StringContent(productId.ToString()), "ProductId");
-        content.Add(new StringContent("1.0.0"), "Version");
-        content.Add(new StringContent("esp32"), "Compatibility");
-        content.Add(new StringContent("Test Author"), "Author");
-        content.Add(new StringContent("Test Copyright"), "Copyright");
-        content.Add(new StringContent("http://notes.url"), "ReleaseNotesUrl");
-        content.Add(new StringContent(FirmwareType.Firmlet.ToString()), "Type");
-        content.Add(new StringContent(FirmwareStatus.Deprecated.ToString()), "Status"); // Deprecated status
+        using var content = new MultipartFormDataContent
+        {
+            { new StringContent(productId.ToString()), "ProductId" },
+            { new StringContent("1.0.0"), "Version" },
+            { new StringContent("esp32"), "Compatibility" },
+            { new StringContent("Test Author"), "Author" },
+            { new StringContent("Test Copyright"), "Copyright" },
+            { new StringContent("http://notes.url"), "ReleaseNotesUrl" },
+            { new StringContent(FirmwareType.Firmlet.ToString()), "Type" },
+            { new StringContent(FirmwareStatus.Deprecated.ToString()), "Status" } // Deprecated status
+        };
         var fileContent = new ByteArrayContent(Encoding.UTF8.GetBytes("fake firmware file"));
         fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
         content.Add(fileContent, "File", "firmware.bin");
@@ -407,15 +389,17 @@ public class FirmwaresControllerTests : IClassFixture<CustomWebApplicationFactor
         var (userKey, vendorId, productId) = await CreateUserKeyVendorAndProduct(scopes: [Scopes.FirmwareCreate]);
         client.DefaultRequestHeaders.Add(ApiKeyAuthHandler.HeaderName, userKey);
 
-        using var content = new MultipartFormDataContent();
-        content.Add(new StringContent(Guid.NewGuid().ToString()), "ProductId"); // Non-existent ProductId
-        content.Add(new StringContent("1.0.0"), "Version");
-        content.Add(new StringContent("esp32"), "Compatibility");
-        content.Add(new StringContent("Test Author"), "Author");
-        content.Add(new StringContent("Test Copyright"), "Copyright");
-        content.Add(new StringContent("http://notes.url"), "ReleaseNotesUrl");
-        content.Add(new StringContent(FirmwareType.Firmlet.ToString()), "Type");
-        content.Add(new StringContent(FirmwareStatus.Release.ToString()), "Status");
+        using var content = new MultipartFormDataContent
+        {
+            { new StringContent(Guid.NewGuid().ToString()), "ProductId" }, // Non-existent ProductId
+            { new StringContent("1.0.0"), "Version" },
+            { new StringContent("esp32"), "Compatibility" },
+            { new StringContent("Test Author"), "Author" },
+            { new StringContent("Test Copyright"), "Copyright" },
+            { new StringContent("http://notes.url"), "ReleaseNotesUrl" },
+            { new StringContent(FirmwareType.Firmlet.ToString()), "Type" },
+            { new StringContent(FirmwareStatus.Release.ToString()), "Status" }
+        };
         var fileContent = new ByteArrayContent(Encoding.UTF8.GetBytes("fake firmware file"));
         fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
         content.Add(fileContent, "File", "firmware.bin");
@@ -438,15 +422,17 @@ public class FirmwaresControllerTests : IClassFixture<CustomWebApplicationFactor
         client.DefaultRequestHeaders.Add(ApiKeyAuthHandler.HeaderName, userKey);
 
         // First upload a firmware
-        using var initialContent = new MultipartFormDataContent();
-        initialContent.Add(new StringContent(productId.ToString()), "ProductId");
-        initialContent.Add(new StringContent("1.0.0"), "Version");
-        initialContent.Add(new StringContent("esp32"), "Compatibility");
-        initialContent.Add(new StringContent("Test Author"), "Author");
-        initialContent.Add(new StringContent("Test Copyright"), "Copyright");
-        initialContent.Add(new StringContent("http://notes.url"), "ReleaseNotesUrl");
-        initialContent.Add(new StringContent(FirmwareType.Firmlet.ToString()), "Type");
-        initialContent.Add(new StringContent(FirmwareStatus.Release.ToString()), "Status");
+        using var initialContent = new MultipartFormDataContent
+        {
+            { new StringContent(productId.ToString()), "ProductId" },
+            { new StringContent("1.0.0"), "Version" },
+            { new StringContent("esp32"), "Compatibility" },
+            { new StringContent("Test Author"), "Author" },
+            { new StringContent("Test Copyright"), "Copyright" },
+            { new StringContent("http://notes.url"), "ReleaseNotesUrl" },
+            { new StringContent(FirmwareType.Firmlet.ToString()), "Type" },
+            { new StringContent(FirmwareStatus.Release.ToString()), "Status" }
+        };
         var initialFileContent = new ByteArrayContent(Encoding.UTF8.GetBytes("initial firmware"));
         initialFileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
         initialContent.Add(initialFileContent, "File", "initial_firmware.bin");
@@ -454,15 +440,17 @@ public class FirmwaresControllerTests : IClassFixture<CustomWebApplicationFactor
         initialResponse.EnsureSuccessStatusCode();
 
         // Try to upload another with the same version and compatibility
-        using var conflictingContent = new MultipartFormDataContent();
-        conflictingContent.Add(new StringContent(productId.ToString()), "ProductId");
-        conflictingContent.Add(new StringContent("1.0.0"), "Version");
-        conflictingContent.Add(new StringContent("esp32"), "Compatibility");
-        conflictingContent.Add(new StringContent("Test Author"), "Author");
-        conflictingContent.Add(new StringContent("Test Copyright"), "Copyright");
-        conflictingContent.Add(new StringContent("http://notes.url"), "ReleaseNotesUrl");
-        conflictingContent.Add(new StringContent(FirmwareType.Firmlet.ToString()), "Type");
-        conflictingContent.Add(new StringContent(FirmwareStatus.Release.ToString()), "Status");
+        using var conflictingContent = new MultipartFormDataContent
+        {
+            { new StringContent(productId.ToString()), "ProductId" },
+            { new StringContent("1.0.0"), "Version" },
+            { new StringContent("esp32"), "Compatibility" },
+            { new StringContent("Test Author"), "Author" },
+            { new StringContent("Test Copyright"), "Copyright" },
+            { new StringContent("http://notes.url"), "ReleaseNotesUrl" },
+            { new StringContent(FirmwareType.Firmlet.ToString()), "Type" },
+            { new StringContent(FirmwareStatus.Release.ToString()), "Status" }
+        };
         var conflictingFileContent = new ByteArrayContent(Encoding.UTF8.GetBytes("conflicting firmware"));
         conflictingFileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
         conflictingContent.Add(conflictingFileContent, "File", "conflicting_firmware.bin");

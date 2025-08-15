@@ -51,16 +51,17 @@ public sealed class KeysService : ServiceBase
         if (request.DaysValid < 1 || request.DaysValid > 365)
             throw new ArgumentException("Validity must be between 1 and 365 days.", nameof(request.DaysValid));
 
-        // TODO: add validation for the scopes they want to include!!!
-        // For example: a vendor should NEVER have firmware.download_all in their API key and they can't have
-        // scopes to delete keys and manage vendors (it'll fail anyway but it shouldn't be possible to create a key
-        // with those scopes). Also: users cannot create an admin api key.
+        if (role != UserRole.Admin && request.Role == "Admin")
+            throw new ForbiddenAccessException("You cannot create an Admin API key.");
+
+        if (request.Role == "User" && request.Scopes.Intersect(Scopes.ForbiddenForUserRole()).Any())
+            throw new ForbiddenAccessException("You cannot create an API key with forbidden scopes.");
 
         var (result, plaintext) = await UnsafeCreateWithoutValidationAsync(request, vendorSpecific: true, cancellationToken);
         return EntityToView(result, plaintext);
     }
 
-    public async Task<string> UnsafeCreateForAdminAsync(CancellationToken cancellationToken = default)
+    internal async Task<string> UnsafeCreateForAdminAsync(CancellationToken cancellationToken = default)
     {
         var request = new CreateRequest(
             VendorId: null,
@@ -73,7 +74,7 @@ public sealed class KeysService : ServiceBase
         return plaintext;
     }
 
-    public async Task<string> UnsafeCreateForHubAsync(CancellationToken cancellationToken = default)
+    internal async Task<string> UnsafeCreateForHubAsync(CancellationToken cancellationToken = default)
     {
         var request = new CreateRequest(
             VendorId: null,

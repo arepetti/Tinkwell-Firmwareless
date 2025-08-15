@@ -1,23 +1,94 @@
 @Tinkwell.Firmwareless.PublicRepository_HostAddress = http://localhost:5165
-@AdminApiKey = ak_Igssxm2M6EKOWUzFgYSTej4u_RYgcKmS
-@UserApiKey = ak_eIPYRrtNY0KWpRi-xo4LQSl8p8jvGXZn
+@AdminApiKey = ak_0-acX26JskGfnWN1MXYLzKBmIHxoXaSv
+@HubApiKey = ak_Dcg0SZxLVkW5SwU_cDxohqOeoRTSLnGX
 
-### Create a new API key
+@VendorId = a829b5cd-0b7c-4393-bdd3-a8d1afef7e8d
+@UserApiKey = ak_05SYE8bZa0OsRgyD1VWyfEuRTIH51HbZ
+@ProductId = 3b0c3734-7f5b-424c-aa70-edc4e9c8f119
+
+### Step 1: create a new vendor
+POST {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/api/v1/vendors
+X-Api-Key: {{AdminApiKey}}
+Content-Type: application/json
+
+{
+  "name": "Test Vendor",
+  "notes": ""
+}
+
+### Step 2: create a new API key for that vendor
 POST {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/api/v1/keys
 X-Api-Key: {{AdminApiKey}}
 Content-Type: application/json
 
 {
+  "vendorId": "{{VendorId}}",
   "name": "Test",
   "role": "User",
   "daysValid": 30,
-  "scopes": ["firmware.read", "firmware.write"]
+  "scopes": ["product.create", "product.read", "product.update", "firmware.create", "firmware.read", "firmware.update"]
 }
 
-### List all keys
-GET {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/api/v1/keys
-X-Api-Key: {{AdminApiKey}}
+### Step 3: create a new product
+POST {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/api/v1/products
+X-Api-Key: {{UserApiKey}}
+Content-Type: application/json
 
-### Revoke a key
-DELETE {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/api/v1/keys/00000000-0000-0000-0000-000000000000
-X-Api-Key: {{AdminApiKey}}
+{
+  "vendorId": "{{VendorId}}",
+  "name": "Test Product",
+  "model": "Test Model",
+  "status": 1
+}
+
+### Step 4: check the created product
+GET {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/api/v1/products
+X-Api-Key: {{UserApiKey}}
+
+### Step 5: create a new firmware for that product
+POST {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/api/v1/firmwares
+X-Api-Key: {{UserApiKey}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="productId"
+
+{{ProductId}}
+--boundary
+Content-Disposition: form-data; name="version"
+
+1.2
+--boundary
+Content-Disposition: form-data; name="compatibility"
+
+any
+--boundary
+Content-Disposition: form-data; name="author"
+
+Adriano Repetti
+--boundary
+Content-Disposition: form-data; name="copyright"
+
+Adriano Repetti, 2025
+--boundary
+Content-Disposition: form-data; name="releaseNotesUrl"
+
+http://example.com/release-notes
+--boundary
+Content-Disposition: form-data; name="type"
+
+Firmlet
+--boundary
+Content-Disposition: form-data; name="status"
+
+Release
+--boundary
+Content-Disposition: form-data; name="file"; filename="firmware.bin"
+Content-Type: application/octet-stream
+
+< ../Tests/add-two.wasm
+--boundary--
+
+### Step 6: list available firmwares
+GET {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/api/v1/firmwares
+X-Api-Key: {{UserApiKey}}

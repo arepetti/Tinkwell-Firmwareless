@@ -68,6 +68,36 @@ public class KeysControllerTests : IClassFixture<CustomWebApplicationFactory<Pro
     }
 
     [Fact]
+    public async Task Create_AdminByUser_ShouldReturnForbidden()
+    {
+        // Arrange
+        var (userKey, vendorId, _) = await CreateUserKeyAndVendor(scopes: [Scopes.KeyCreate]);
+        _client.DefaultRequestHeaders.Add(ApiKeyAuthHandler.HeaderName, userKey);
+        var request = new KeysService.CreateRequest(vendorId, "New Admin Key", "Admin", 7, [Scopes.KeyRead]);
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/v1/keys", request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Create_DisabledScopesForUser_ShouldReturnForbidden()
+    {
+        // Arrange
+        var (userKey, vendorId, _) = await CreateUserKeyAndVendor(scopes: [Scopes.KeyCreate]);
+        _client.DefaultRequestHeaders.Add(ApiKeyAuthHandler.HeaderName, userKey);
+        var request = new KeysService.CreateRequest(vendorId, "New User Key", "User", 7, [Scopes.VendorCreate]);
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/v1/keys", request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
     public async Task Get_AsUser_ForAnotherVendorsKey_ShouldReturnNotFound()
     {
         // Arrange

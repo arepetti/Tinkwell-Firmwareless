@@ -26,6 +26,14 @@ static class Scopes
 
     public const string FirmwareDownloadAll = "firmware.download_all";
 
+    public static string[] ForbiddenForUserRole() =>
+    [
+        VendorCreate,
+        VendorUpdate,
+        VendorDelete,
+        FirmwareDelete
+    ];
+
     public static string[] All()
     {
         return typeof(Scopes)

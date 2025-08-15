@@ -1,4 +1,7 @@
 # ---- C# / .NET ----
+# Local data
+.containers/
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
@@ -23,7 +26,6 @@ artifacts/
 
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt
-
 
 # NuGet
 packages/

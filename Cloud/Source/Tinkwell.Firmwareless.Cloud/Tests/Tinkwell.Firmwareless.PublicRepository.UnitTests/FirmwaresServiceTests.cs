@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using System.Security.Claims;
@@ -22,7 +23,8 @@ public class FirmwaresServiceTests
         // Arrange
         var dbContext = DbContextHelper.GetInMemoryDbContext();
         var fakeBlobClient = new FakeBlobContainerClient { ShouldThrowOnUpload = true };
-        var service = new FirmwaresService(dbContext, fakeBlobClient, _fileUploadOptions);
+        var loggerMock = new Mock<ILogger<FirmwaresService>>();
+        var service = new FirmwaresService(loggerMock.Object, dbContext, fakeBlobClient, _fileUploadOptions);
 
         var vendor = new Vendor { Id = Guid.NewGuid(), Name = "Test Vendor" };
         var product = new Product { Id = Guid.NewGuid(), Name = "Test Product", Model = "T-1000", Vendor = vendor };
@@ -47,7 +49,8 @@ public class FirmwaresServiceTests
         // Arrange
         var dbContext = DbContextHelper.GetInMemoryDbContext();
         var fakeBlobClient = new FakeBlobContainerClient();
-        var service = new FirmwaresService(dbContext, fakeBlobClient, _fileUploadOptions);
+        var loggerMock = new Mock<ILogger<FirmwaresService>>();
+        var service = new FirmwaresService(loggerMock.Object, dbContext, fakeBlobClient, _fileUploadOptions);
         var userPrincipal = CreatePrincipal("User", [Scopes.FirmwareCreate], Guid.NewGuid());
         var formFile = new FormFile(new MemoryStream(Encoding.UTF8.GetBytes("firmware content")), 0, 100, "firmware", "firmware.bin");
         var request = new FirmwaresService.CreateRequest(Guid.NewGuid(), "1.0.0/invalid", "esp32", "author", "copyright", "notes.url", FirmwareType.Firmlet, FirmwareStatus.Release, formFile);

@@ -2,10 +2,6 @@ using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Moq;
-using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Tinkwell.Firmwareless.PublicRepository.UnitTests.Fakes;
 
@@ -49,4 +45,16 @@ public class FakeBlobContainerClient : BlobContainerClient
 
         return mockBlobClient.Object;
     }
+
+    public override Response<BlobContainerInfo> CreateIfNotExists(PublicAccessType publicAccessType = PublicAccessType.None, IDictionary<string, string> metadata = null!, BlobContainerEncryptionScopeOptions encryptionScopeOptions = null, CancellationToken cancellationToken = default)
+        => null!;
+
+    public override Response<BlobContainerInfo> CreateIfNotExists(PublicAccessType publicAccessType, IDictionary<string, string> metadata, CancellationToken cancellationToken)
+        => null!;
+
+    public override Task<Response<BlobContainerInfo>> CreateIfNotExistsAsync(PublicAccessType publicAccessType = PublicAccessType.None, IDictionary<string, string> metadata = null, BlobContainerEncryptionScopeOptions encryptionScopeOptions = null, CancellationToken cancellationToken = default)
+        => Task.FromResult<Response<BlobContainerInfo>>(null!);
+
+    public override Task<Response<BlobContainerInfo>> CreateIfNotExistsAsync(PublicAccessType publicAccessType, IDictionary<string, string> metadata, CancellationToken cancellationToken)
+        => Task.FromResult<Response<BlobContainerInfo>>(null!);
 }

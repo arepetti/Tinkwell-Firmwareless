@@ -33,7 +33,7 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
 
         // Assert
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<ProductsService.View>();
+        var result = await response.Content.ReadFromJsonAsync<ProductsService.View>(JsonDefaults.Options);
         result.Should().NotBeNull();
         result?.Name.Should().Be("Test Product");
         result?.VendorId.Should().Be(vendorId);
@@ -74,7 +74,7 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
         var adminClient = _factory.CreateClient();
         adminClient.DefaultRequestHeaders.Add(ApiKeyAuthHandler.HeaderName, adminKey);
         var otherRequest = new ProductsService.CreateRequest(otherVendorId, "Other Product", "P-2", ProductStatus.Production);
-        var otherCreatedResponse = await adminClient.PostAsJsonAsync("/api/v1/products", otherRequest);
+        var otherCreatedResponse = await adminClient.PostAsJsonAsync("/api/v1/products", otherRequest, JsonDefaults.Options);
         otherCreatedResponse.EnsureSuccessStatusCode();
 
         // Act
@@ -82,7 +82,7 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
 
         // Assert
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<Services.Queries.FindResponse<ProductsService.View>>();
+        var result = await response.Content.ReadFromJsonAsync<Services.Queries.FindResponse<ProductsService.View>>(JsonDefaults.Options);
         result.Should().NotBeNull();
         result?.Items.Should().HaveCount(1);
         result?.Items.Single().VendorId.Should().Be(myVendorId);
@@ -139,7 +139,7 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
         // Assert
         response.EnsureSuccessStatusCode();
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadFromJsonAsync<Services.Queries.FindResponse<ProductsService.View>>();
+        var result = await response.Content.ReadFromJsonAsync<Services.Queries.FindResponse<ProductsService.View>>(JsonDefaults.Options);
         result.Should().NotBeNull();
         result?.Items.Should().NotBeEmpty();
     }
@@ -158,7 +158,7 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
         // Assert
         response.EnsureSuccessStatusCode();
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadFromJsonAsync<ProductsService.View>();
+        var result = await response.Content.ReadFromJsonAsync<ProductsService.View>(JsonDefaults.Options);
         result.Should().NotBeNull();
         result?.Id.Should().Be(productId);
     }
@@ -175,7 +175,7 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
         var createRequest = new ProductsService.CreateRequest(vendorId, "Product to Delete", "Model X", ProductStatus.Production);
         var createResponse = await client.PostAsJsonAsync("/api/v1/products", createRequest);
         createResponse.EnsureSuccessStatusCode();
-        var createdProduct = await createResponse.Content.ReadFromJsonAsync<ProductsService.View>();
+        var createdProduct = await createResponse.Content.ReadFromJsonAsync<ProductsService.View>(JsonDefaults.Options);
 
         // Act
         var response = await client.DeleteAsync($"/api/v1/products/{createdProduct!.Id}");
@@ -200,7 +200,7 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
         var createRequest = new ProductsService.CreateRequest(vendorId, "Original Name", "Original Model", ProductStatus.Production);
         var createResponse = await client.PostAsJsonAsync("/api/v1/products", createRequest);
         createResponse.EnsureSuccessStatusCode();
-        var createdProduct = await createResponse.Content.ReadFromJsonAsync<ProductsService.View>();
+        var createdProduct = await createResponse.Content.ReadFromJsonAsync<ProductsService.View>(JsonDefaults.Options);
 
         var updateRequest = new ProductsService.UpdateRequest(createdProduct!.Id, "Updated Name", null, null);
 
@@ -210,7 +210,7 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
         // Assert
         response.EnsureSuccessStatusCode();
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var updatedProduct = await response.Content.ReadFromJsonAsync<ProductsService.View>();
+        var updatedProduct = await response.Content.ReadFromJsonAsync<ProductsService.View>(JsonDefaults.Options);
         updatedProduct.Should().NotBeNull();
         updatedProduct?.Name.Should().Be("Updated Name");
     }
@@ -269,7 +269,7 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
 
         // Assert
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<Services.Queries.FindResponse<ProductsService.View>>();
+        var result = await response.Content.ReadFromJsonAsync<Services.Queries.FindResponse<ProductsService.View>>(JsonDefaults.Options);
         result.Should().NotBeNull();
         result?.Items.Should().HaveCount(1);
         result?.Items.Single().Name.Should().Be(products[0].Name);
@@ -288,7 +288,7 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
 
         // Assert
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<Services.Queries.FindResponse<ProductsService.View>>();
+        var result = await response.Content.ReadFromJsonAsync<Services.Queries.FindResponse<ProductsService.View>>(JsonDefaults.Options);
         result.Should().NotBeNull();
         result?.Items.Should().HaveCount(1);
         result?.Items.Single().Name.Should().Be(products[0].Name);
@@ -307,7 +307,7 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
 
         // Assert
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<Services.Queries.FindResponse<ProductsService.View>>();
+        var result = await response.Content.ReadFromJsonAsync<Services.Queries.FindResponse<ProductsService.View>>(JsonDefaults.Options);
         result.Should().NotBeNull();
         result?.Items.Should().HaveCount(2);
         result?.Items.Should().Contain(p => p.Name == "Apple");
@@ -327,7 +327,7 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
 
         // Assert
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<Services.Queries.FindResponse<ProductsService.View>>();
+        var result = await response.Content.ReadFromJsonAsync<Services.Queries.FindResponse<ProductsService.View>>(JsonDefaults.Options);
         result.Should().NotBeNull();
         result?.Items.Should().HaveCount(4);
         result?.Items.Select(p => p.Name).Should().ContainInOrder("Apple", "Banana", "Cherry", "Date");
@@ -346,7 +346,7 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
 
         // Assert
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<Services.Queries.FindResponse<ProductsService.View>>();
+        var result = await response.Content.ReadFromJsonAsync<Services.Queries.FindResponse<ProductsService.View>>(JsonDefaults.Options);
         result.Should().NotBeNull();
         result?.Items.Should().HaveCount(4);
         result?.Items.Select(p => p.Name).Should().ContainInOrder("Date", "Cherry", "Banana", "Apple");
@@ -365,7 +365,7 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
 
         // Assert
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<Services.Queries.FindResponse<ProductsService.View>>();
+        var result = await response.Content.ReadFromJsonAsync<Services.Queries.FindResponse<ProductsService.View>>(JsonDefaults.Options);
         result.Should().NotBeNull();
         result?.Items.Should().HaveCount(4);
         // Expected order: Galaxy (Banana), iPhone (Date), iPhone (Apple), Pixel (Cherry)
