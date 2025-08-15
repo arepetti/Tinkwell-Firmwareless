@@ -1,0 +1,3 @@
+[submodule "Device/Thermostat/esp-idf"]
+	path = Device/Thermostat/esp-idf
+	url = https://github.com/espressif/esp-idf.git
