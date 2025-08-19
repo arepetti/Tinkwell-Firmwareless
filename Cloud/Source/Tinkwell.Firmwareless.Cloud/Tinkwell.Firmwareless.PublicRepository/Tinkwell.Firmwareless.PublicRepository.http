@@ -6,6 +6,9 @@
 @UserApiKey = ak_05SYE8bZa0OsRgyD1VWyfEuRTIH51HbZ
 @ProductId = 3b0c3734-7f5b-424c-aa70-edc4e9c8f119
 
+### Step 0: check connectivity
+GET {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/status
+
 ### Step 1: create a new vendor
 POST {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/api/v1/vendors
 X-Api-Key: {{AdminApiKey}}
@@ -52,14 +55,14 @@ Content-Type: application/json
 
 {
   "productId": "{{ProductId}}",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "compatibility": "any",
   "type": "Firmlet",
   "status": "Release",
   "author": "Adriano Repetti",
   "copyright": "Adriano",
   "releaseNotesUrl": "https://example.com/notes",  
-  "fileBase64": "AGFzbQEAAAABBwFgAn9/AX8DAgEABwoBBmFkZFR3bwAACgkBBwAgACABagsACgRuYW1lAgMBAAA="
+  "fileBase64": "UEsDBBQAAAAIAGy8E1vDVMtfZgAAAI8AAAANAAAAZmlybXdhcmUuanNvbqvmUlBQcs1LTMpJ9S3NKckMyShKTUxRslJIS8wpTtVByIYkZuY4J+bkYJFyTyxKSkxPdc7PyUlNLsnMz0NR45yfW5CZkwgSD83LLCkGSkYDxYEyiSkpuiXl+XrlicW5SkChWK5aAFBLAwQUAAAACAAOXA9bDSvY3zkAAAA4AAAADAAAAGFkZC10d28ud2FzbWNILM5lZGBgYGRnTGCqr2esZ2ZiZGDnYmRLTEkJKc9nYODiZGRnUGBQYMziZuBiyUvMTWViBmoAAFBLAQIUABQAAAAIAGy8E1vDVMtfZgAAAI8AAAANAAAAAAAAAAAAAACAAQAAAABmaXJtd2FyZS5qc29uUEsBAhQAFAAAAAgADlwPWw0r2N85AAAAOAAAAAwAAAAAAAAAAAAAALaBkQAAAGFkZC10d28ud2FzbVBLBQYAAAAAAgACAHUAAAD0AAAAAAA="
 }
 
 ### Step 6: list available firmwares

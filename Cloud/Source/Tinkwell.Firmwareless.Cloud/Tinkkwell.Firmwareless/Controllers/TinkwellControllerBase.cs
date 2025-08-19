@@ -36,6 +36,10 @@ public abstract class TinkwellControllerBase(ILogger logger) : ControllerBase
         catch (HttpRequestException e)
         {
             _logger.LogError(e, "Error calling another service: {Message}", e.Message);
+
+            if (e.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                return BadRequest();
+
             return StatusCode(
                 StatusCodes.Status503ServiceUnavailable,
                 new ErrorResponse($"The service is currently unavailable. Please try again later. Details: {e.Message}"));

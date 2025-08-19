@@ -6,12 +6,11 @@ namespace Tinkwell.Firmwareless.CompilationServer.Services;
 
 public sealed class Compiler
 {
-    public sealed record Request(string JobId, string WorkingDirectory, string Target, List<(string InputFileName, string OutputFileName)> Units)
+    public sealed record Request(string JobId, string WorkingDirectory, string Target)
     {
+        public required CompilationManifest Manifest {  get; set; }
+        public required Func<string, string> GetOutputFileName { get; set; }
         public string? StackUsageFile { get; set; }
-        public bool EnableMultiThread { get; set; }
-        public bool EnableTailCall { get; set; } = true;
-        public bool EnableGarbageCollection { get; set; }
         public bool VerboseLog { get; set; }
     };
 
@@ -48,10 +47,10 @@ public sealed class Compiler
     {
         _logger.LogInformation("Preparing the compilation script for {JobId}", request.JobId);
         List<string> compilationScript = new();
-        foreach (var unit in request.Units)
+        foreach (var unit in request.Manifest.CompilationUnits)
         {
-            compilationScript.Add($"while [ ! -f \"{ContainerWorkingDirectory}/{unit.InputFileName}\" ]; do sleep 1; done");
-            var args = GetCompilerArgs(request, unit.InputFileName, unit.OutputFileName);
+            compilationScript.Add($"while [ ! -f \"{ContainerWorkingDirectory}/{unit}\" ]; do sleep 1; done");
+            var args = GetCompilerArgs(request, unit, request.GetOutputFileName(unit));
             string[] command = [ContainerWamrcPath, .. args];
             compilationScript.Add(string.Join(' ', command));
             _logger.LogInformation("Command {Command}", string.Join(' ', command));
@@ -74,9 +73,10 @@ public sealed class Compiler
 
         var options = new CompilerOptionsBuilderOptions
         {
-            EnableMultiThread = request.EnableMultiThread,
-            EnableTailCall = request.EnableTailCall,
-            EnableGarbageCollection = request.EnableGarbageCollection,
+            StackUsageFile = request.StackUsageFile,
+            EnableMultiThread = request.Manifest.EnableMultiThread,
+            EnableTailCall = request.Manifest.EnableTailCall,
+            EnableGarbageCollection = request.Manifest.EnableGarbageCollection,
             VerboseLog = request.VerboseLog
         };
 
