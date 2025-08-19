@@ -1,10 +1,11 @@
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
+using Tinkwell.Firmwareless.Exceptions;
 using Tinkwell.Firmwareless.PublicRepository.Authentication;
 using Tinkwell.Firmwareless.PublicRepository.Configuration;
 using Tinkwell.Firmwareless.PublicRepository.Database;
-using Tinkwell.Firmwareless.PublicRepository.Repositories;
+using Tinkwell.Firmwareless.PublicRepository.Services;
 
 namespace Tinkwell.Firmwareless.PublicRepository.UnitTests;
 

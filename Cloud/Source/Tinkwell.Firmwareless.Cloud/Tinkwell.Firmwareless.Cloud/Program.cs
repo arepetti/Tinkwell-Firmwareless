@@ -36,6 +36,7 @@ var wamrcCompiler = builder.AddDockerfile("wamrc-compiler", "../Tinkwell.Firmwar
 
 var compilationServer = builder
     .AddProject<Projects.Tinkwell_Firmwareless_CompilationServer>("tinkwell-compilation-server")
+    .WithReference(assets)
     .WithReference(builds)
     .WithHttpsEndpoint();
 

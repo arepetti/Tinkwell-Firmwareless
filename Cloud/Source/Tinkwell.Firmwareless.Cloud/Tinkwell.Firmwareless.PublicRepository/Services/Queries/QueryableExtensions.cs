@@ -66,13 +66,13 @@ static class QueryableExtensions
         return source.Where(lambda);
     }
 
-    private static Expression BuildEquals(Expression prop, string value)
+    private static BinaryExpression BuildEquals(Expression prop, string value)
     {
         var constant = ToConstant(prop.Type, value);
         return Expression.Equal(prop, constant);
     }
 
-    private static Expression BuildContainsIgnoreCase(Expression prop, string value)
+    private static BinaryExpression BuildContainsIgnoreCase(Expression prop, string value)
     {
         if (prop.Type != typeof(string))
             throw new NotSupportedException($"Contains is supported only on string properties. Property type: {prop.Type.Name}");

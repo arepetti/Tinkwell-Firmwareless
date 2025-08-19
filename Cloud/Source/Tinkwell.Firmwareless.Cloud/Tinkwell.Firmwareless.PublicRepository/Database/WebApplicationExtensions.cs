@@ -1,12 +1,15 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Tinkwell.Firmwareless.PublicRepository.Configuration;
-using Tinkwell.Firmwareless.PublicRepository.Repositories;
+using Tinkwell.Firmwareless.PublicRepository.Services;
 
 namespace Tinkwell.Firmwareless.PublicRepository.Database;
 
 static class WebApplicationExtensions
 {
+    private const int MaxRetries = 5;
+    private const int DelayBetweenRetries = 1000;
+
     public static async Task ApplyMigrationsAsync(this WebApplication app, IServiceScope scope)
     {
         // Do not run migrations in test environment
@@ -16,9 +19,7 @@ static class WebApplicationExtensions
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var apiOpts = scope.ServiceProvider.GetRequiredService<IOptions<ApiKeyOptions>>().Value;
 
-        const int maxRetries = 5;
-        const int delayBetweenRetries = 2000;
-        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        for (int attempt = 1; attempt <= MaxRetries; ++attempt)
         {
             try
             {
@@ -32,13 +33,13 @@ static class WebApplicationExtensions
             {
                 app.Logger.LogError(ex, "Migration failed: {Reason}", ex.Message);
 
-                if (attempt == maxRetries)
+                if (attempt == MaxRetries)
                 {
                     app.Logger.LogInformation("Max retries reached. Giving up.");
                     throw;
                 }
 
-                await Task.Delay(delayBetweenRetries);
+                await Task.Delay(DelayBetweenRetries * attempt);
             }
         }
     }

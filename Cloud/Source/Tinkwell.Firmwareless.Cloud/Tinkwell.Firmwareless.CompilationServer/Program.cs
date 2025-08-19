@@ -1,18 +1,15 @@
-using Azure.Storage.Blobs;
 using Docker.DotNet;
 using System.Runtime.InteropServices;
+using Tinkkwell.Firmwareless;
 using Tinkwell.Firmwareless.CompilationServer.Services;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddControllers();
 
-builder.Services.AddSingleton(serviceProvider =>
-{
-    var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-    var connectionString = configuration.GetConnectionString("tinkwell-firmwarestore")
-             ?? throw new InvalidOperationException("Missing connection string 'tinkwell-firmwarestore'.");
-    return new BlobContainerClient(connectionString, "tinkwell-firmwarestore-builds");
-});
+builder.AddDefaultLogging();
+builder.AddInvalidModelStateLogging();
+
+// External resourcess
+builder.Services.AddAspireBlobContainerClientFactory();
 
 builder.Services.AddSingleton<IDockerClient>(serviceProvider => 
 {
@@ -22,9 +19,26 @@ builder.Services.AddSingleton<IDockerClient>(serviceProvider =>
     return new DockerClientConfiguration(new Uri(dockerUri)).CreateClient();
 });
 
+// Services
+builder.Services.AddScoped<Compiler>();
 builder.Services.AddScoped<ICompilationService, CompilationService>();
 
+builder.Services
+    .AddControllers()
+    .AddJsonOptions(options =>
+    {
+        foreach (var c in JsonDefaults.Options.Converters)
+            options.JsonSerializerOptions.Converters.Add(c);
+    });
+
+
+// Build the app
 var app = builder.Build();
-//app.UseHttpsRedirection();
+
+app.AddExceptionLogging();
+app.AddFailedResponseLogging();
+
+app.UseHttpsRedirection();
+app.UseRouting();
 app.MapControllers();
 app.Run();

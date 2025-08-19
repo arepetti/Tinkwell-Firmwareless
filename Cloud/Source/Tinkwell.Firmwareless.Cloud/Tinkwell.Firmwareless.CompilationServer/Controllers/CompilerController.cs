@@ -1,13 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using Tinkwell.Firmwareless.CompilationServer.Services;
+using Tinkwell.Firmwareless.Controllers;
 
 namespace Tinkwell.Firmwareless.CompilationServer.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
-public class CompilerController : ControllerBase
+public class CompilerController : TinkwellControllerBase
 {
-    public CompilerController(ICompilationService compilationService, ILogger<CompilerController> logger)
+    public CompilerController(ICompilationService compilationService, ILogger<CompilerController> logger) : base(logger)
     {
         _compilationService = compilationService;
         _logger = logger;
@@ -18,14 +19,14 @@ public class CompilerController : ControllerBase
     {
         _logger.LogInformation("Received compilation request for architecture {Architecture}", request.Architecture);
 
-        if (string.IsNullOrWhiteSpace(request.BlobUrl) || string.IsNullOrWhiteSpace(request.Architecture))
-            return BadRequest("BlobUrl and Architecture are required.");
+        if (string.IsNullOrWhiteSpace(request.BlobName) || string.IsNullOrWhiteSpace(request.Architecture))
+            return BadRequest("BlobName and Architecture are required.");
 
         try
         {
             var resultStream = await _compilationService.CompileAsync(request, cancellationToken);
             
-            _logger.LogInformation("Compilation successful, returning ZIP archive.");
+            _logger.LogInformation("Compilation completed, returning ZIP archive.");
             return File(resultStream, "application/zip", $"compilation-result-{request.Architecture}.zip");
         }
         catch (NotSupportedException ex)

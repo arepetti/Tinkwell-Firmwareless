@@ -3,12 +3,13 @@ using Microsoft.Extensions.Options;
 using System.Data;
 using System.Diagnostics;
 using System.Security.Claims;
+using Tinkwell.Firmwareless.Exceptions;
 using Tinkwell.Firmwareless.PublicRepository.Authentication;
 using Tinkwell.Firmwareless.PublicRepository.Configuration;
 using Tinkwell.Firmwareless.PublicRepository.Database;
 using Tinkwell.Firmwareless.PublicRepository.Services.Queries;
 
-namespace Tinkwell.Firmwareless.PublicRepository.Repositories;
+namespace Tinkwell.Firmwareless.PublicRepository.Services;
 
 #pragma warning disable CA2208 // Instantiate argument exceptions correctly
 

@@ -1,6 +1,6 @@
-﻿namespace Tinkwell.Firmwareless.PublicRepository.Repositories;
+﻿namespace Tinkwell.Firmwareless.Exceptions;
 
-sealed class NotFoundException : ArgumentException
+public sealed class NotFoundException : ArgumentException
 {
     public NotFoundException(string message) : base(message) { }
     public NotFoundException(string message, string paramName) : base(message, paramName) { }

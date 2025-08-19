@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Tinkwell.Firmwareless.PublicRepository.Controllers;
+namespace Tinkkwell.Firmwareless;
 
 public static class JsonDefaults
 {

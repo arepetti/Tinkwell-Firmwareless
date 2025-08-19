@@ -30,4 +30,8 @@
     <InternalsVisibleTo Include="Tinkwell.Firmwareless.PublicRepository.IntegrationTests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Tinkkwell.Firmwareless\Tinkkwell.Firmwareless.csproj" />
+  </ItemGroup>
+
 </Project>

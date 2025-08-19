@@ -1,10 +1,11 @@
+using Microsoft.Extensions.Logging;
 using Tinkwell.Firmwareless.PublicRepository.Services;
 
 namespace Tinkwell.Firmwareless.PublicRepository.IntegrationTests.Fakes;
 
 public class FakeCompilationProxyService : CompilationProxyService
 {
-    public FakeCompilationProxyService(IHttpClientFactory factory) : base(factory)
+    public FakeCompilationProxyService(IHttpClientFactory factory, ILogger<CompilationProxyService> logger) : base(factory, logger)
     {
     }
 

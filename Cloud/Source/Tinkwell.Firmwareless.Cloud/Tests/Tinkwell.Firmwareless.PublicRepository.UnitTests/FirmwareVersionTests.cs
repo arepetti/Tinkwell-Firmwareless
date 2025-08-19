@@ -1,5 +1,5 @@
 using FluentAssertions;
-using Tinkwell.Firmwareless.PublicRepository.Repositories;
+using Tinkwell.Firmwareless.PublicRepository.Services;
 
 namespace Tinkwell.Firmwareless.PublicRepository.UnitTests
 {

@@ -1,32 +1,69 @@
-# Use a lean base image
 FROM ubuntu:22.04
 
-# Install only necessary tools for downloading and extracting
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+# Install essential build tools and various cross-compilation toolchains.
+# - `ca-certificates`, `wget`, `git`, `build-essential` (gcc, g++, make), `cmake`, `ninja-build`: Core development tools.
+# - `python3`, `python3-requests`: Required in WAMRC build scripts.
+# - `lsb-release`, `software-properties-common`, `gnupg`: Required by the LLVM installation script.
+# - `curl`: Needed to download the Wasmer installation script.
+# - `zlib1g-dev`: Development headers and libraries for Zlib, required by WAMRC.
+# - `ccache`: A compiler cache to speed up repeated compilations.
+# - `libgcc-s1`, `lib32gcc-s1`: Standard GCC runtime libraries.
+# - `mingw-w64`: Cross-compilation toolchain for Windows targets.
+# - `gcc-aarch64-linux-gnu`, `g++-aarch64-linux-gnu`: Cross-compilation tools for AArch64 Linux.
+# - `gcc-arm-linux-gnueabi`, `g++-arm-linux-gnueabi`: Cross-compilation tools for ARM Linux (e.g., Raspberry Pi).
+# - `gcc-riscv64-linux-gnu`, `g++-riscv64-linux-gnu`: Cross-compilation tools for RISC-V 64-bit Linux.
 RUN apt-get update && apt-get install -y \
-    wget \
     ca-certificates \
-    tar \
+    wget \
+    git \
+    build-essential \
+    cmake \
+    ninja-build \
+    python3 \
+    python3-requests \
+    lsb-release \
+    software-properties-common \
+    gnupg \
+    curl \
+    zlib1g-dev \
+    ccache \
+    libgcc-s1 \
+    lib32gcc-s1 \
+    mingw-w64 \
+    gcc-aarch64-linux-gnu \
+    g++-aarch64-linux-gnu \
+    gcc-arm-linux-gnueabi \
+    g++-arm-linux-gnueabi \
+    gcc-riscv64-linux-gnu \
+    g++-riscv64-linux-gnu \
+    --no-install-recommends \
+    && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
 
-# Set WAMR version and asset details from the official release
-ENV WAMR_VERSION=2.4.1
-ENV WAMR_TAG=WAMR-${WAMR_VERSION}
-ENV WAMR_ASSET=wamrc-${WAMR_VERSION}-x86_64-ubuntu-22.04
+RUN wget https://apt.llvm.org/llvm.sh && \
+    chmod +x llvm.sh && \
+    ./llvm.sh 18
 
-# Download and install the pre-built wamrc binary
-WORKDIR /tmp
-RUN wget https://github.com/bytecodealliance/wasm-micro-runtime/releases/download/${WAMR_TAG}/${WAMR_ASSET}.tar.gz
-RUN tar -xzf ${WAMR_ASSET}.tar.gz
+ENV PATH="/usr/lib/ccache:${PATH}"
 
-# Copy the wamrc tool to a directory in the PATH
-# The binary is extracted to the current directory.
-RUN cp ./wamrc /usr/local/bin/wamrc
+RUN git clone https://github.com/bytecodealliance/wasm-micro-runtime.git /root/wamr && \
+    cd /root/wamr/wamr-compiler && \
+    mkdir build && \
+    cd build && \
+    cmake .. \
+        -DWAMR_BUILD_AOT=1 \
+        -DWAMR_BUILD_AOT_LLVM=1 \
+        -DWAMR_BUILD_WITH_CUSTOM_LLVM=1 \
+        -DWAMR_BUILD_AOT_LLVM_ROOT="/usr/lib/llvm-18" \
+        -DCMAKE_INSTALL_PREFIX="/usr/local/wamr" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DZLIB_LIBRARY="/usr/lib/x86_64-linux-gnu/libz.so" \
+        -DZLIB_INCLUDE_DIR="/usr/include" && \
+    make -j$(nproc) && \
+    make install
 
-# Clean up downloaded files
-RUN rm -rf /tmp/*
-
-# Set the final working directory for the container's runtime
-WORKDIR /data
-
-# This image does not run a command by default.
-# The command will be supplied by the CompilationServer when it runs the container.
+ENV PATH="/usr/local/wamr/bin:${PATH}"
+WORKDIR /app

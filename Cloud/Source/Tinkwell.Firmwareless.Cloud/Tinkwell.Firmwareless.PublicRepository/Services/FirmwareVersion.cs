@@ -1,4 +1,4 @@
-﻿namespace Tinkwell.Firmwareless.PublicRepository.Repositories;
+﻿namespace Tinkwell.Firmwareless.PublicRepository.Services;
 
 sealed class FirmwareVersion : IComparable<FirmwareVersion>, IEquatable<FirmwareVersion>
 {

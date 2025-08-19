@@ -8,7 +8,7 @@ using System.Text;
 using Tinkwell.Firmwareless.PublicRepository.Authentication;
 using Tinkwell.Firmwareless.PublicRepository.Configuration;
 using Tinkwell.Firmwareless.PublicRepository.Database;
-using Tinkwell.Firmwareless.PublicRepository.Repositories;
+using Tinkwell.Firmwareless.PublicRepository.Services;
 using Tinkwell.Firmwareless.PublicRepository.UnitTests.Fakes;
 
 namespace Tinkwell.Firmwareless.PublicRepository.UnitTests;

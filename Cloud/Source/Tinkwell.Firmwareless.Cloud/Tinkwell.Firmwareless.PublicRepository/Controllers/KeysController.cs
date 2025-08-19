@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Tinkwell.Firmwareless.PublicRepository.Repositories;
+using Tinkwell.Firmwareless.Controllers;
+using Tinkwell.Firmwareless.PublicRepository.Services;
 using Tinkwell.Firmwareless.PublicRepository.Services.Queries;
 
 namespace Tinkwell.Firmwareless.PublicRepository.Controllers;

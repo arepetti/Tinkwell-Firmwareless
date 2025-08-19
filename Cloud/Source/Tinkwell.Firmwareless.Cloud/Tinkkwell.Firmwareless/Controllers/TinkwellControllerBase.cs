@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Tinkwell.Firmwareless.PublicRepository.Repositories;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Tinkwell.Firmwareless.Exceptions;
 
-namespace Tinkwell.Firmwareless.PublicRepository.Controllers;
+namespace Tinkwell.Firmwareless.Controllers;
 
 public abstract class TinkwellControllerBase(ILogger logger) : ControllerBase
 {

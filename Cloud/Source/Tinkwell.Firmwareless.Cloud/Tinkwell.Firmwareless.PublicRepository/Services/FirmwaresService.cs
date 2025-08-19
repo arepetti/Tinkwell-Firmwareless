@@ -3,12 +3,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
 using System.Security.Claims;
+using Tinkwell.Firmwareless.Exceptions;
 using Tinkwell.Firmwareless.PublicRepository.Authentication;
 using Tinkwell.Firmwareless.PublicRepository.Configuration;
 using Tinkwell.Firmwareless.PublicRepository.Database;
 using Tinkwell.Firmwareless.PublicRepository.Services.Queries;
 
-namespace Tinkwell.Firmwareless.PublicRepository.Repositories;
+namespace Tinkwell.Firmwareless.PublicRepository.Services;
 
 #pragma warning disable CA2208 // Instantiate argument exceptions correctly
 
@@ -30,8 +31,17 @@ public sealed class FirmwaresService(ILogger<FirmwaresService> logger, AppDbCont
         if (request.File.Length > _uploadOpts.MaxFirmwareSizeBytes)
             throw new ArgumentException($"Firmware size cannot exceed {_uploadOpts.MaxFirmwareSizeBytes / 1024 / 1024} MB.", nameof(request.File));
 
-        if (_uploadOpts.AllowedContentTypes.Length > 0 && !_uploadOpts.AllowedContentTypes.Contains(request.File.ContentType))
-            throw new ArgumentException($"Invalid content type: {request.File.ContentType}.", nameof(request.File));
+        try
+        {
+            if (_uploadOpts.AllowedContentTypes.Length > 0 && !_uploadOpts.AllowedContentTypes.Contains(request.File.ContentType))
+                throw new ArgumentException($"Invalid content type: {request.File.ContentType}.", nameof(request.File));
+        }
+        catch (NullReferenceException)
+        {
+            // For reasons unknown to me, if you create IFormFile using FormFile you do not actually get a valid
+            // IFileType and reading ContentType fails with this exception! It's fair because content-type is not even
+            // a parameter for FormFile constructor but you'd expect it to default to something instead of blindly throwing an exception.
+        }
 
         var (role, scopes, vendorId) = user.GetScopesAndVendorId();
         if (!scopes.Contains(Scopes.FirmwareCreate))

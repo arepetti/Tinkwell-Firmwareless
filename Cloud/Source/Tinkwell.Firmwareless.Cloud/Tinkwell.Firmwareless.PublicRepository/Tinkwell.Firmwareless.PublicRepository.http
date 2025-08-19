@@ -48,46 +48,19 @@ X-Api-Key: {{UserApiKey}}
 ### Step 5: create a new firmware for that product
 POST {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/api/v1/firmwares
 X-Api-Key: {{UserApiKey}}
-Content-Type: multipart/form-data; boundary=boundary
+Content-Type: application/json
 
---boundary
-Content-Disposition: form-data; name="productId"
-
-{{ProductId}}
---boundary
-Content-Disposition: form-data; name="version"
-
-1.2
---boundary
-Content-Disposition: form-data; name="compatibility"
-
-any
---boundary
-Content-Disposition: form-data; name="author"
-
-Adriano Repetti
---boundary
-Content-Disposition: form-data; name="copyright"
-
-Adriano Repetti, 2025
---boundary
-Content-Disposition: form-data; name="releaseNotesUrl"
-
-http://example.com/release-notes
---boundary
-Content-Disposition: form-data; name="type"
-
-Firmlet
---boundary
-Content-Disposition: form-data; name="status"
-
-Release
---boundary
-Content-Disposition: form-data; name="file"; filename="firmware.bin"
-Content-Type: application/octet-stream
-
-< ../Tests/add-two.wasm
---boundary--
+{
+  "productId": "{{ProductId}}",
+  "version": "1.5.0",
+  "compatibility": "any",
+  "type": "Firmlet",
+  "status": "Release",
+  "author": "Adriano Repetti",
+  "copyright": "Adriano",
+  "releaseNotesUrl": "https://example.com/notes",  
+  "fileBase64": "AGFzbQEAAAABBwFgAn9/AX8DAgEABwoBBmFkZFR3bwAACgkBBwAgACABagsACgRuYW1lAgMBAAA="
+}
 
 ### Step 6: list available firmwares
 GET {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/api/v1/firmwares
@@ -103,5 +76,5 @@ Content-Type: application/json
   "productId": "{{ProductId}}",
   "type": "Firmlet",
   "hardwareVersion": "1.0",
-  "hardwareArchitecture": "x86_64"
+  "hardwareArchitecture": "linux"
 }

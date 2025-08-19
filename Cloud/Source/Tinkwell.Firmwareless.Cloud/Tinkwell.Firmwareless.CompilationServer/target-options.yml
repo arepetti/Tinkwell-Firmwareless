@@ -1,0 +1,102 @@
+schema: 1
+
+flags:
+  # ********** x86
+  "x86_64-*-linux-gnu": ["--target=x86_64-{vendor}-linux-gnu"]
+  "x86_64-*-linux-musl": ["--target=x86_64-{vendor}-linux-musl", "--enable-segue"]
+  "x86_64-*-windows-gnu": ["--target=x86_64-{vendor}-windows-gnu"]
+  "x86_64-*-windows-msvc": ["--target=x86_64-{vendor}-windows-msvc"]
+  "x86_64-apple-darwin-none": ["--target=x86_64-apple-darwin-none"]
+
+  "i686-*-linux-gnu": ["--target=i686-{vendor}-linux-gnu"]
+  "i686-*-linux-musl": ["--target=i686-{vendor}-linux-musl"]
+
+  # ********** Arm 64 bit (AArch64)
+  "aarch64-*-linux-gnu": ["--target=aarch64-{vendor}-linux-gnu"]
+  "aarch64-*-linux-musl": ["--target=aarch64-{vendor}-linux-musl"]
+  "aarch64-apple-darwin-none": ["--target=aarch64-apple-darwin-none"]
+  "aarch64-*-windows-msvc": ["--target=aarch64-{vendor}-windows-msvc"]
+  "aarch64-*-windows-gnu": ["--target=aarch64-{vendor}-windows-gnu"]
+
+  # ********** Arm 32-bit (armv7 and friends)
+  # glibc hard-float
+  "armv7|arm-*-linux-gnueabihf": ["--target=arm-{vendor}-linux-gnueabihf", "--mllvm", "-mfloat-abi=hard"]
+  # glibc soft-float (EABI)
+  "armv7|arm-*-linux-gnueabi": ["--target=arm-{vendor}-linux-gnueabi", "--mllvm", "-mfloat-abi=softfp"]
+  # musl hard-float
+  "armv7|arm-*-linux-musleabihf": ["--target=arm-{vendor}-linux-musleabihf", "--mllvm", "-mfloat-abi=hard"]
+  # musl soft-float
+  "armv7|arm-*-linux-musleabi": ["--target=arm-{vendor}-linux-musleabi", "--mllvm", "-mfloat-abi=softfp"]
+
+  # ********** RISC-V 64 bit
+  # Linux glibc baseline (GC + LP64D)
+  "riscv64|rv64-*-linux-gnu": ["--target=riscv64-{vendor}-linux-gnu", "--mllvm", "-march=rv64gc", "--mllvm", "-mabi=lp64d"]
+  # Linux musl
+  "riscv64|rv64-*-linux-musl": ["--target=riscv64-{vendor}-linux-musl", "--mllvm", "-march=rv64gc", "--mllvm", "-mabi=lp64d"]
+
+  # ********** RISC-V 32 bit
+  "riscv32|rv32-*-linux-gnu": ["--target=riscv32-{vendor}-linux-gnu", "--mllvm", "-march=rv32gc", "--mllvm", "-mabi=ilp32d"]
+  "riscv32|rv32-*-linux-musl": ["--target=riscv32-{vendor}-linux-musl", "--mllvm", "-march=rv32gc", "--mllvm", "-mabi=ilp32d"]
+
+features:
+  x86_64:
+    # CPU/ISA
+    sse42: ["--mllvm", "-mattr=+sse4.2"]
+    avx2: ["--mllvm", "-mattr=+avx2,+bmi2,+fma,+lzcnt,+popcnt"]
+    avx512-core: ["--mllvm", "-mattr=+avx512f,+avx512cd,+avx512vl,+avx512bw,+avx512dq"]
+    # Crypto & carryless multiply
+    aes: ["--mllvm", "-mattr=+aes,+pclmul"]
+    sha: ["--mllvm", "-mattr=+sha"]
+    vaes: ["--mllvm", "-mattr=+vaes,+vpclmulqdq"]
+    cpu-znver3: ["--mllvm", "-mcpu=znver3"]
+    cpu-skylake: ["--cpu=skylake"]
+
+  aarch64:
+    # Baselines by micro-arch
+    cpu-neoverse-n1: ["--mllvm", "-mcpu=neoverse-n1"]
+    cpu-neoverse-v1: ["--mllvm", "-mcpu=neoverse-v1"]
+    cpu-cortex-a72: ["--mllvm", "-mcpu=cortex-a72"]
+    # ISA/feature toggles
+    crc: ["--mllvm", "-mattr=+crc"]
+    crypto: ["--mllvm", "-mattr=+crypto"] # AES/SHA extensions
+    dotprod: ["--mllvm", "-mattr=+dotprod"] # ARMv8.2+ dot product
+    fp16: ["--mllvm", "-mattr=+fp16"]
+    sve: ["--mllvm", "-mattr=+sve"]
+    sve2: ["--mllvm", "-mattr=+sve2"]
+    bti: ["--mllvm", "-mattr=+bti"]
+    pac: ["--mllvm", "-mattr=+pauth"]
+
+  arm:
+    # FPU/ABI presets (compose with target ABI carefully)
+    fpu-vfpv3: ["--mllvm", "-mfpu=vfpv3", "--mllvm", "-mfloat-abi=softfp"]
+    fpu-vfpv3-d16: ["--mllvm", "-mfpu=vfpv3-d16", "--mllvm", "-mfloat-abi=softfp"]
+    fpu-vfpv4: ["--mllvm", "-mfpu=vfpv4", "--mllvm", "-mfloat-abi=hard"]
+    fpu-neon: ["-mfpu=neon", "-mfloat-abi=hard"]
+    fpu-neon-vfpv4: ["--mllvm", "-mfpu=neon-vfpv4", "--mllvm", "-mfloat-abi=hard"]
+    thumb: ["--mllvm", "-mthumb"]
+    # CPU presets
+    cpu-cortex-a7: ["--mllvm", "-mcpu=cortex-a7"]
+    cpu-cortex-a9: ["--mllvm", "-mcpu=cortex-a9"]
+    cpu-cortex-a53: ["--mllvm", "-mcpu=cortex-a53"]
+
+  riscv64:
+    # ISA sets (override -march/-mabi if needed)
+    isa-gc-lp64d: ["--mllvm", "-march=rv64gc", "--mllvm", "-mabi=lp64d"]
+    isa-gc-lp64: ["--mllvm", "-march=rv64gc", "--mllvm", "-mabi=lp64"]
+    isa-gcv-lp64d: ["--mllvm", "-march=rv64gcv", "--mllvm", "-mabi=lp64d"] # Vector
+    # Extensions as attributes (compose on top)
+    bitmanip: ["--mllvm", "-mattr=+zba,+zbb,+zbc,+zbs"]
+    crypto-zkn: ["--mllvm", "-mattr=+zkn,+zbkb,+zbkc,+zbkx"] # NIST hash/AES subsets
+    crypto-zks: ["--mllvm", "-mattr=+zks"] # Symmetric
+    crypto-zkt: ["--mllvm", "-mattr=+zkt"] # Entropy/constant-time
+    # Tunings
+    tune-sifive-u: ["--mllvm", "-mtune=sifive-u"]
+    tune-rocket: ["--mllvm", "-mtune=rocket"]
+
+  riscv32:
+    isa-gc-ilp32d: ["--mllvm", "-march=rv32gc", "--mllvm", "-mabi=ilp32d"]
+    isa-gc-ilp32: ["--mllvm", "-march=rv32gc", "--mllvm", "-mabi=ilp32"]
+    isa-gcv-ilp32d: ["--mllvm", "-march=rv32gcv", "--mllvm", "-mabi=ilp32d"]
+    bitmanip: ["--mllvm", "-mattr=+zba,+zbb,+zbc,+zbs"]
+    crypto-zkn: ["--mllvm", "-mattr=+zkn,+zbkb,+zbkc,+zbkx"]
+    crypto-zks: ["--mllvm", "-mattr=+zks"]

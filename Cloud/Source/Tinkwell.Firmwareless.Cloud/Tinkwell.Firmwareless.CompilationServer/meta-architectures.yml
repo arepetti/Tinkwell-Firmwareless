@@ -1,0 +1,95 @@
+schema: 1
+
+normalize:
+  architecture:
+    armv7l: armv7
+    armhf: armv7
+    armv8l: armv8
+    aarch32: armv7 # It's armv8 but in 32-bit mode
+    arm64: aarch64
+    a64: aarch64 # Technically it's an instruction set...
+    a32: armv7 # Technically it's an instruction set...
+    x64: x86_64
+    i386: i686
+    rv64: riscv64
+    rv32: riscv32
+  os:
+    macos: darwin
+    macosx: darwin
+    win32: windows
+    win64: windows
+    win: windows
+    gnu: linux
+  abi:
+    glibc: gnu
+    arm32: msvc # Arm 32 bit ABI on Windows
+    arm64: msvc # Arm 64 bit ABI on Windows
+    x32: msvc # Intel 32 bit ABI on Windows
+    x64: msvc # Intel 64 bit ABI on Windows
+    uwp: msvc
+  vendor:
+    intel: pc
+    amd: pc
+    openembedded: unknown
+    freescale: unknown
+    suse: pc
+
+meta:
+  windows:
+    set:
+      architecture: x86_64
+      vendor: pc
+      os: windows
+      abi: msvc
+
+  linux:
+    set:
+      architecture: x86_64
+      vendor: pc
+      os: linux
+      abi: gnu
+
+  macos:
+    set:
+      architecture: x86_64
+      vendor: apple
+      os: darwin
+      abi: gnu
+
+  raspberry_5_32:
+    set:
+      architecture: arm
+      vendor: unknown
+      os: linux
+      abi: gnueabihf
+      cpu: cortex-a76
+      mfloat-abi: hard
+      mfpu: neon-fp-armv8
+
+  raspberry_cm5_32:
+    set:
+      architecture: arm
+      vendor: unknown
+      os: linux
+      abi: gnueabihf
+      cpu: cortex-a76
+      mfloat-abi: hard
+      mfpu: neon-fp-armv8
+    features: [crypto]
+
+  raspberry_5_64:
+    set:
+      architecture: aarch64
+      vendor: unknown
+      os: linux
+      abi: gnu
+      cpu: cortex-a76
+
+  raspberry_cm5_64:
+    set:
+      architecture: aarch64
+      vendor: unknown
+      os: linux
+      abi: gnu
+      cpu: cortex-a76
+    features: [crypto]

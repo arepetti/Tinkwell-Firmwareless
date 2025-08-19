@@ -4,10 +4,12 @@ using System.Net;
 using System.Text;
 using Tinkwell.Firmwareless.PublicRepository.Authentication;
 using Tinkwell.Firmwareless.PublicRepository.Database;
-using Tinkwell.Firmwareless.PublicRepository.Repositories;
+using Tinkwell.Firmwareless.PublicRepository.Services;
 using System.Security.Claims;
 using Tinkwell.Firmwareless.PublicRepository.Controllers;
 using System.Net.Http.Json;
+using Tinkkwell.Firmwareless;
+using Tinkwell.Firmwareless.Controllers;
 
 namespace Tinkwell.Firmwareless.PublicRepository.IntegrationTests;
 

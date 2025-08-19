@@ -1,8 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net.Mime;
+using Tinkkwell.Firmwareless;
+using Tinkwell.Firmwareless.Controllers;
 using Tinkwell.Firmwareless.PublicRepository.Database;
-using Tinkwell.Firmwareless.PublicRepository.Repositories;
 using Tinkwell.Firmwareless.PublicRepository.Services;
 using Tinkwell.Firmwareless.PublicRepository.Services.Queries;
 
@@ -13,17 +14,57 @@ namespace Tinkwell.Firmwareless.PublicRepository.Controllers;
 public sealed class FirmwaresController(ILogger<FirmwaresController> logger, FirmwaresService service, CompilationProxyService compilationProxy)
     : TinkwellControllerBase(logger)
 {
+    public sealed record JsonCreateRequest(Guid ProductId, string Version, string Compatibility, string Author, string Copyright, string ReleaseNotesUrl, FirmwareType Type, FirmwareStatus Status, string FileBase64);
     public sealed record DownloadRequest(Guid VendorId, Guid ProductId, FirmwareType Type, string HardwareVersion, string HardwareArchitecture);
 
     [HttpPost]
     [Authorize]
-    [Consumes("multipart/form-data")]
-    public async Task<ActionResult<FirmwaresService.View>> Create([FromForm] FirmwaresService.CreateRequest req, CancellationToken ct)
+    public async Task<ActionResult<FirmwaresService.View>> Create(CancellationToken ct)
     {
         return await Try(async () =>
         {
-            var entity = await _service.CreateAsync(User, req, ct);
-            return CreatedAtAction(nameof(Find), new { id = entity.Id }, entity);
+            if (Request.ContentType?.StartsWith("multipart/form-data") == true)
+            {
+                var form = await Request.ReadFormAsync(ct);
+                var req = new FirmwaresService.CreateRequest(
+                    Guid.Parse(form["ProductId"].Single() ?? ""),
+                    form["Version"].Single() ?? "",
+                    form["Compatibility"].Single() ?? "",
+                    form["Author"].Single() ?? "",
+                    form["Copyright"].Single() ?? "",
+                    form["ReleaseNotesUrl"].Single() ?? "",
+                    Enum.Parse<FirmwareType>(form["Type"].Single() ?? "", true),
+                    Enum.Parse<FirmwareStatus>(form["Status"].Single() ?? "", true),
+                    form.Files["File"]!
+                );
+
+                var entity = await _service.CreateAsync(User, req, ct);
+                return CreatedAtAction(nameof(Find), new { id = entity.Id }, entity);
+            }
+            else if (Request.ContentType?.StartsWith("application/json") == true)
+            {
+                var req = await Request.ReadFromJsonAsync<JsonCreateRequest>(JsonDefaults.Options, cancellationToken: ct);
+                if (req is null || string.IsNullOrWhiteSpace(req.FileBase64))
+                    throw new ArgumentException("Invalid JSON payload.");
+
+                byte[] fileBytes = Convert.FromBase64String(req.FileBase64);
+                var formRequest = new FirmwaresService.CreateRequest(
+                    req.ProductId,
+                    req.Version,
+                    req.Compatibility,
+                    req.Author,
+                    req.Copyright,
+                    req.ReleaseNotesUrl,
+                    req.Type,
+                    req.Status,
+                    new FormFile(new MemoryStream(fileBytes), 0, fileBytes.Length, "File", "firmware.bin")
+                );
+
+                var entity = await _service.CreateAsync(User, formRequest, ct);
+                return CreatedAtAction(nameof(Find), new { id = entity.Id }, entity);
+            }
+
+            throw new ArgumentException("Unsupported content type.");
         });
     }
 
@@ -87,7 +128,7 @@ public sealed class FirmwaresController(ILogger<FirmwaresController> logger, Fir
                 ct);
 
             _logger.LogInformation("Compiling {Name} for HardwareArchitecture={HardwareArchitecture}", blobName, request.HardwareArchitecture);
-            var compilationRequest = new CompilationProxyService.Request(blobName, request.HardwareArchitecture);
+            var compilationRequest = new CompilationRequest(blobName, request.HardwareArchitecture);
             var stream = await _compilationProxy.CompileAsync(compilationRequest, ct);
 
             Response.Headers.CacheControl = "no-store";

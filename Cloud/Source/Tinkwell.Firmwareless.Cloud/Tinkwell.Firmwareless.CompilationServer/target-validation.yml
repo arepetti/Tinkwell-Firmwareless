@@ -1,0 +1,75 @@
+schema: 1
+
+validate:
+  components:
+    architecture:
+      any: [x86_64, i686, aarch64]
+      any_regex:
+        - '^armv(6|7|8|9)[a-z0-9_.-]*$'
+        - '^arm$'
+        - '^rv(32|64)[a-z0-9_+-]*$'
+        - '^riscv(32|64)([a-z0-9_+-]*)?$'
+    vendor:
+      any: [pc, apple, unknown]
+    os:
+      any: [linux, windows, darwin]
+    abi:
+      any: [gnu, gnueabihf, musl, msvc, cygnus, none]
+
+  rules:
+    # MacOS with Intel or Apple silicon  
+    - when:
+        os: darwin
+      require:
+        vendor: apple
+        architecture:
+          any: [x86_64, aarch64]
+        abi: none
+
+    # Windows 64 bit with Intel or Arm silicon
+    - when:
+        os: windows
+        abi: msvc
+      require:
+        vendor: pc
+        architecture:
+          any: [x86_64, aarch64]
+        abi:
+          any: [msvc, gnu, cygnus]
+
+    # Linux (32 and 64 bit) with Intel or Arm silicon
+    - when:
+        os: linux
+        architecture:
+          any: [x86_64, i686, aarch64]
+      require:
+        vendor:
+          any: [pc, unknown]
+        abi:
+          any: [gnu, musl]
+
+    # Linux (32 and 64 bit) with Arm silicon
+    - when:
+        os: linux
+        architecture:
+          any_regex:
+            - '^armv(6|7|8|9)[a-z0-9_.-]*$'
+            - '^arm$'
+      require:
+        vendor:
+          any: [pc, unknown]
+        abi:
+          any: [gnueabihf, musl]
+          
+    # Linux (32 and 64 bit) with RISC-V silicon
+    - when:
+        os: linux
+        architecture:
+          any_regex:
+            - '^rv(32|64)[a-z0-9_+-]*$'
+            - '^riscv(32|64)([a-z0-9_+-]*)?$'
+      require:
+        vendor:
+          any: [pc, unknown]
+        abi:
+          any: [gnu, musl]
