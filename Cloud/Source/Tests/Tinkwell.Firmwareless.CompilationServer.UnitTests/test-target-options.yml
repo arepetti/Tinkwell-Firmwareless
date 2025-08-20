@@ -1,0 +1,7 @@
+schema: 1
+flags:
+  x86_64-pc-linux-gnu: ["--target=x86_64-pc-linux-gnu"]
+  x86_64-pc-windows-msvc: ["--target=x86_64-pc-windows-msvc"]
+features:
+  x86_64:
+    crypto: ["-mattr=+aes"]

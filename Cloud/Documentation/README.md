@@ -1,365 +1,163 @@
-# Tinkwell Firmwareless Cloud API
+# Public Repository
 
-This document provides an overview of the Tinkwell Firmwareless Cloud API, including available endpoints, required authorization scopes, and common workflows for provisioning, vendors, and hub developers.
+```mermaid
+   graph LR;
+      Repository -- "[firmlet (native)]" --> Hub;
+      Hub -- "fetch" --> Repository;
+      Hub -- "query" --> Device;
+      Device -- "[manifest]" --> Hub;
+      Vendor -- "publish firmlet (WASM)" --> Repository;
 
-## API Scopes
+      style Repository fill:#ff9999,stroke:#333,stroke-width:2px
+```
 
-The following scopes define the permissions within the Tinkwell Firmwareless Cloud API:
+## Bootstrapping
 
-*   `key.create`: Allows creation of new API keys.
-*   `key.read`: Allows reading API key details.
-*   `key.revoke`: Allows revoking API keys.
-*   `key.delete`: Allows deleting API keys.
-*   `vendor.create`: Allows creating new vendors.
-*   `vendor.read`: Allows reading vendor details.
-*   `vendor.update`: Allows updating vendor details.
-*   `vendor.delete`: Allows deleting vendors.
-*   `product.create`: Allows creating new products.
-*   `product.read`: Allows reading product details.
-*   `product.update`: Allows updating product details.
-*   `product.delete`: Allows deleting products.
-*   `firmware.create`: Allows creating new firmware entries.
-*   `firmware.read`: Allows reading firmware details.
-*   `firmware.update`: Allows updating firmware details.
-*   `firmware.delete`: Allows deleting firmware entries.
-*   `firmware.download_all`: Allows downloading firmware files.
+See also [endpoints and permissions](Endpoints.md).
 
-## API Endpoints
+When testing locally you do not need to repeat the bootstrapping workflow each time, settings are persisted in `Cloud/Source/Tinkwell.Firmless.Cloud/.containers`, delete the whole directory if you want to reset and start from scratch.
 
-All authenticated API requests require an API key to be passed in the `X-Api-Key` HTTP header.
+In these examples I am using `curl` or the internal tools in `Cloud/Tools` (they are not for production use!) but, if you prefer, you can use `Cloud\Source\Tinkwell.Firmwareless.PublicRepository\Tinkwell.Firmwareless.PublicRepository.http` from within Visual Studio (there are annotated examples ready to use).
 
-### Firmwares Controller (`/api/v1/firmwares`)
+All interactions with the API require an API Key, a freshly deployed system doesn't have any but one is created when bootstrapping the system
+the first time. It's logged in the "public repository" log, it's valid for a short interval and it has as little permissions as possible. Also a generic
+key for hubs (with scope `firmware.download_all`) is created, you can distribute it freely (or create your own, if you want).
 
-*   **`POST /api/v1/firmwares`**
-    *   **Description:** Creates a new firmware entry and uploads the firmware file.
-    *   **Required Scope:** `firmware.create`
-    *   **Parameters (Form Data):**
-        *   `ProductId` (Guid): The ID of the product this firmware belongs to.
-        *   `Version` (string): The version string of the firmware (e.g., "1.0.0", "1.2.3-beta").
-        *   `Compatibility` (string): Compatibility information for the firmware (e.g., "esp32", "armv7").
-        *   `Author` (string): The author of the firmware.
-        *   `Copyright` (string): Copyright information for the firmware.
-        *   `ReleaseNotesUrl` (string): URL to the release notes.
-        *   `Type` (FirmwareType): The type of firmware (e.g., `Service`, `Firmlet`, `DeviceRuntime`).
-        *   `Status` (FirmwareStatus): The status of the firmware (e.g., `PreRelease`, `Release`, `Deprecated`).
-        *   `File` (IFormFile): The firmware binary file.
-    *   **Status Codes:**
-        *   `201 Created`: Firmware created successfully.
-        *   `400 Bad Request`: Invalid input (e.g., validation errors, file too large, invalid content type, invalid version format, attempting to create a deprecated firmware, conflicting version/compatibility).
-        *   `401 Unauthorized`: No API key provided or API key is invalid/expired/revoked.
-        *   `403 Forbidden`: Insufficient scope or role to perform the action.
-        *   `404 Not Found`: Product ID not found.
-        *   `500 Internal Server Error`: An unexpected server error occurred.
-        *   `503 Service Unavailable`: An error occurred with the compilation server during upload rollback.
-*   **`GET /api/v1/firmwares`**
-    *   **Description:** Retrieves a paginated list of all firmwares, with optional filtering and sorting.
-    *   **Required Scope:** `firmware.read`
-    *   **Parameters (Query):**
-        *   `pageIndex` (int, optional, default: 0): The page number to retrieve.
-        *   `pageLength` (int, optional, default: 20): The number of items per page.
-        *   `filter` (string, optional): Filter criteria (see [Filtering and Sorting](#filtering-and-sorting)).
-        *   `sort` (string, optional): Sort criteria (see [Filtering and Sorting](#filtering-and-sorting)).
-    *   **Status Codes:**
-        *   `200 OK`: Successfully retrieved the list of firmwares.
-        *   `400 Bad Request`: Invalid query parameters (e.g., `pageIndex` or `pageLength` out of range, invalid filter/sort syntax).
-        *   `401 Unauthorized`: No API key provided or API key is invalid/expired/revoked.
-        *   `403 Forbidden`: Insufficient scope or role to perform the action.
-*   **`GET /api/v1/firmwares/{id:guid}`**
-    *   **Description:** Retrieves a specific firmware by its ID.
-    *   **Required Scope:** `firmware.read`
-    *   **Parameters (URL):**
-        *   `id` (Guid): The ID of the firmware to retrieve.
-    *   **Status Codes:**
-        *   `200 OK`: Successfully retrieved the firmware.
-        *   `401 Unauthorized`: No API key provided or API key is invalid/expired/revoked.
-        *   `403 Forbidden`: Insufficient scope or role to perform the action.
-        *   `404 Not Found`: Firmware with the specified ID not found.
-*   **`PUT /api/v1/firmwares`**
-    *   **Description:** Updates an existing firmware's status.
-    *   **Required Scope:** `firmware.update`
-    *   **Parameters (Body):**
-        *   `Id` (Guid): The ID of the firmware to update.
-        *   `Status` (FirmwareStatus, optional): The new status of the firmware (e.g., `PreRelease`, `Release`, `Deprecated`).
-    *   **Status Codes:**
-        *   `200 OK`: Firmware updated successfully.
-        *   `400 Bad Request`: Invalid input (e.g., validation errors).
-        *   `401 Unauthorized`: No API key provided or API key is invalid/expired/revoked.
-        *   `403 Forbidden`: Insufficient scope or role to perform the action.
-        *   `404 Not Found`: Firmware with the specified ID not found.
-        *   `409 Conflict`: Concurrency conflict (e.g., another user modified the firmware simultaneously).
-        *   `500 Internal Server Error`: An unexpected server error occurred.
-*   **`DELETE /api/v1/firmwares/{id:guid}`**
-    *   **Description:** Deletes a firmware by its ID.
-    *   **Required Role:** `Admin`
-    *   **Required Scope:** `firmware.delete`
-    *   **Parameters (URL):**
-        *   `id` (Guid): The ID of the firmware to delete.
-    *   **Status Codes:**
-        *   `204 No Content`: Firmware deleted successfully.
-        *   `401 Unauthorized`: No API key provided or API key is invalid/expired/revoked.
-        *   `403 Forbidden`: Insufficient scope or role to perform the action (Admin role required).
-        *   `404 Not Found`: Firmware with the specified ID not found.
-        *   `409 Conflict`: Concurrency conflict.
-        *   `500 Internal Server Error`: An unexpected server error occurred.
-*   **`POST /api/v1/firmwares/download`**
-    *   **Description:** Downloads a firmware file based on vendor, product, type, and hardware version.
-    *   **Required Scope:** `firmware.download_all`
-    *   **Parameters (Body):**
-        *   `VendorId` (Guid): The ID of the vendor.
-        *   `ProductId` (Guid): The ID of the product.
-        *   `Type` (FirmwareType): The type of firmware.
-        *   `HardwareVersion` (string): The hardware version.
-        *   `HardwareArchitecture` (string): The hardware architecture.
-    *   **Status Codes:**
-        *   `200 OK`: Successfully retrieved and returned the firmware file (content type `application/octet-stream`).
-        *   `400 Bad Request`: Invalid input (e.g., missing parameters).
-        *   `401 Unauthorized`: No API key provided or API key is invalid/expired/revoked.
-        *   `403 Forbidden`: Insufficient scope or role to perform the action.
-        *   `404 Not Found`: No applicable firmware found for the given criteria.
-        *   `503 Service Unavailable`: An error occurred while compiling or retrieving the firmware from the compilation server.
+* Use the system generated API Key to create a new Admin key with `POST /api/v1/keys`, assign all permissions and set role to `POST Admin`, like this:
 
-### Keys Controller (`/api/v1/keys`)
+    ```bash
+    curl -X POST https://your-api-host.com/api/v1/keys \
+    -H "Content-Type: application/json" \
+    -H "X-Api-Key: your-api-key-here" \
+    -d '{
+        "Name": "Admin key",
+        "Role": "Admin",
+        "DaysValid": -1,
+        "Scopes": [
+            "key.create",
+            "key.read",
+            "key.revoke",
+            "key.delete",
+            "vendor.create",
+            "vendor.read",
+            "vendor.update",
+            "vendor.delete",
+            "product.create",
+            "product.read",
+            "product.update",
+            "product.delete",
+            "firmware.create",
+            "firmware.read",
+            "firmware.update",
+            "firmware.delete",
+            "firmware.download_all"
+        ]
+    }'
+    ```
+* Now you must revoke the temporary API Key. Find its ID querying `GET /api/v1/keys` and revoke it with `DELETE api/v1/keys/<id>/revoke`.
+* Now you can can create a _vendor_:
 
-*   **`POST /api/v1/keys`**
-    *   **Description:** Creates a new API key.
-    *   **Required Scope:** `key.create`
-    *   **Parameters (Body):**
-        *   `VendorId` (Guid?, optional): The ID of the vendor this key belongs to. Null for Admin keys.
-        *   `Name` (string): A descriptive name for the API key.
-        *   `Role` (string): The role associated with the key ("User" or "Admin").
-        *   `DaysValid` (int): The number of days the key is valid for (1 to 365). Use -1 for no expiration.
-        *   `Scopes` (string[]): An array of scopes granted to this key.
-    *   **Status Codes:**
-        *   `201 Created`: API key created successfully.
-        *   `400 Bad Request`: Invalid input (e.g., missing name, invalid role, days valid out of range).
-        *   `401 Unauthorized`: No API key provided or API key is invalid/expired/revoked.
-        *   `403 Forbidden`: Insufficient scope or role to perform the action (e.g., non-admin trying to create admin key, user trying to create key for another vendor).
-        *   `404 Not Found`: Vendor ID not found if specified.
-        *   `409 Conflict`: Concurrency conflict.
-        *   `500 Internal Server Error`: An unexpected server error occurred.
-*   **`GET /api/v1/keys`**
-    *   **Description:** Retrieves a paginated list of all API keys.
-    *   **Required Scope:** `key.read`
-    *   **Parameters (Query):**
-        *   `pageIndex` (int, optional, default: 0): The page number to retrieve.
-        *   `pageLength` (int, optional, default: 20): The number of items per page.
-        *   `filter` (string, optional): Filter criteria (see [Filtering and Sorting](#filtering-and-sorting)).
-        *   `sort` (string, optional): Sort criteria (see [Filtering and Sorting](#filtering-and-sorting)).
-    *   **Status Codes:**
-        *   `200 OK`: Successfully retrieved the list of API keys.
-        *   `400 Bad Request`: Invalid query parameters.
-        *   `401 Unauthorized`: No API key provided or API key is invalid/expired/revoked.
-        *   `403 Forbidden`: Insufficient scope or role to perform the action.
-*   **`GET /api/v1/keys/{id:guid}`**
-    *   **Description:** Retrieves a specific API key by its ID.
-    *   **Required Scope:** `key.read`
-    *   **Parameters (URL):**
-        *   `id` (Guid): The ID of the API key to retrieve.
-    *   **Status Codes:**
-        *   `200 OK`: Successfully retrieved the API key.
-        *   `401 Unauthorized`: No API key provided or API key is invalid/expired/revoked.
-        *   `403 Forbidden`: Insufficient scope or role to perform the action.
-        *   `404 Not Found`: API key with the specified ID not found (or not accessible by the current user).
-*   **`DELETE /api/v1/keys/{id:guid}/revoke`**
-    *   **Description:** Revokes an API key by its ID.
-    *   **Required Scope:** `key.revoke`
-    *   **Parameters (URL):**
-        *   `id` (Guid): The ID of the API key to revoke.
-    *   **Status Codes:**
-        *   `204 No Content`: API key revoked successfully.
-        *   `401 Unauthorized`: No API key provided or API key is invalid/expired/revoked.
-        *   `403 Forbidden`: Insufficient scope or role to perform the action.
-        *   `404 Not Found`: API key with the specified ID not found (or not accessible by the current user).
-        *   `409 Conflict`: Concurrency conflict.
-        *   `500 Internal Server Error`: An unexpected server error occurred.
-*   **`DELETE /api/v1/keys/{id:guid}`**
-    *   **Description:** Deletes an API key by its ID.
-    *   **Required Scope:** `key.delete`
-    *   **Parameters (URL):**
-        *   `id` (Guid): The ID of the API key to delete.
-    *   **Status Codes:**
-        *   `204 No Content`: API key deleted successfully.
-        *   `401 Unauthorized`: No API key provided or API key is invalid/expired/revoked.
-        *   `403 Forbidden`: Insufficient scope or role to perform the action.
-        *   `404 Not Found`: API key with the specified ID not found (or not accessible by the current user).
-        *   `409 Conflict`: Concurrency conflict.
-        *   `500 Internal Server Error`: An unexpected server error occurred.
+    ```bash
+    curl -X POST https://your-api-host.com/api/v1/vendors \
+    -H "Content-Type: application/json" \
+    -H "X-Api-Key: your-api-key-here" \
+    -d '{ "Name": "Vendor name" }'
+    ```
 
-### Products Controller (`/api/v1/products`)
+* Then its API key:
 
-*   **`POST /api/v1/products`**
-    *   **Description:** Creates a new product.
-    *   **Required Scope:** `product.create` (or `Admin` role)
-    *   **Parameters (Body):**
-        *   `VendorId` (Guid): The ID of the vendor this product belongs to.
-        *   `Name` (string): The name of the product.
-        *   `Model` (string): The model identifier of the product.
-        *   `Status` (ProductStatus): The status of the product (e.g., `Development`, `Production`, `Retired`).
-    *   **Status Codes:**
-        *   `201 Created`: Product created successfully.
-        *   `400 Bad Request`: Invalid input (e.g., missing name or model).
-        *   `401 Unauthorized`: No API key provided or API key is invalid/expired/revoked.
-        *   `403 Forbidden`: Insufficient scope or role to perform the action (e.g., user trying to create product for another vendor).
-        *   `404 Not Found`: Vendor ID not found.
-        *   `409 Conflict`: Concurrency conflict.
-        *   `500 Internal Server Error`: An unexpected server error occurred.
-*   **`GET /api/v1/products`**
-    *   **Description:** Retrieves a paginated list of all products, with optional filtering and sorting.
-    *   **Required Scope:** `product.read`
-    *   **Parameters (Query):**
-        *   `pageIndex` (int, optional, default: 0): The page number to retrieve.
-        *   `pageLength` (int, optional, default: 20): The number of items per page.
-        *   `filter` (string, optional): Filter criteria (see [Filtering and Sorting](#filtering-and-sorting)).
-        *   `sort` (string, optional): Sort criteria (see [Filtering and Sorting](#filtering-and-sorting)).
-    *   **Status Codes:**
-        *   `200 OK`: Successfully retrieved the list of products.
-        *   `400 Bad Request`: Invalid query parameters.
-        *   `401 Unauthorized`: No API key provided or API key is invalid/expired/revoked.
-        *   `403 Forbidden`: Insufficient scope or role to perform the action.
-*   **`GET /api/v1/products/{id:guid}`**
-    *   **Description:** Retrieves a specific product by its ID.
-    *   **Required Scope:** `product.read`
-    *   **Parameters (URL):**
-        *   `id` (Guid): The ID of the product to retrieve.
-    *   **Status Codes:**
-        *   `200 OK`: Successfully retrieved the product.
-        *   `401 Unauthorized`: No API key provided or API key is invalid/expired/revoked.
-        *   `403 Forbidden`: Insufficient scope or role to perform the action.
-        *   `404 Not Found`: Product with the specified ID not found (or not accessible by the current user).
-*   **`PUT /api/v1/products`**
-    *   **Description:** Updates an existing product.
-    *   **Required Scope:** `product.update`
-    *   **Parameters (Body):**
-        *   `Id` (Guid): The ID of the product to update.
-        *   `Name` (string, optional): The new name of the product.
-        *   `Model` (string, optional): The new model identifier of the product.
-        *   `Status` (ProductStatus, optional): The new status of the product.
-    *   **Status Codes:**
-        *   `200 OK`: Product updated successfully.
-        *   `400 Bad Request`: Invalid input.
-        *   `401 Unauthorized`: No API key provided or API key is invalid/expired/revoked.
-        *   `403 Forbidden`: Insufficient scope or role to perform the action.
-        *   `404 Not Found`: Product with the specified ID not found (or not accessible by the current user).
-        *   `409 Conflict`: Concurrency conflict.
-        *   `500 Internal Server Error`: An unexpected server error occurred.
-*   **`DELETE /api/v1/products/{id:guid}`**
-    *   **Description:** Deletes a product by its ID.
-    *   **Required Scope:** `product.delete`
-    *   **Parameters (URL):**
-        *   `id` (Guid): The ID of the product to delete.
-    *   **Status Codes:**
-        *   `204 No Content`: Product deleted successfully.
-        *   `401 Unauthorized`: No API key provided or API key is invalid/expired/revoked.
-        *   `403 Forbidden`: Insufficient scope or role to perform the action.
-        *   `404 Not Found`: Product with the specified ID not found (or not accessible by the current user).
-        *   `409 Conflict`: Concurrency conflict.
-        *   `500 Internal Server Error`: An unexpected server error occurred.
+    ```bash
+    curl -X POST https://your-api-host.com/api/v1/keys \
+    -H "Content-Type: application/json" \
+    -H "X-Api-Key: your-api-key-here" \
+    -d '{
+        "Name": "Vendor key",
+        "Role": "User",
+        "DaysValid": 365,
+        "Scopes": [
+            "key.create",
+            "key.read",
+            "key.revoke",
+            "vendor.read",
+            "vendor.update",
+            "product.create",
+            "product.read",
+            "product.update",
+            "product.delete",
+            "firmware.create",
+            "firmware.read",
+            "firmware.update",
+            "firmware.delete",
+            "firmware.download_all"
+        ]
+    }'
+    ```
 
-### Vendors Controller (`/api/v1/vendors`)
+* At this point you can use the newly created API key, each vendor is autonomous. You're going to need to create a product (`POST /api/v1/products`)
+and then upload its firmwares.
 
-*   **`POST /api/v1/vendors`**
-    *   **Description:** Creates a new vendor.
-    *   **Required Role:** `Admin`
-    *   **Required Scope:** `vendor.create`
-    *   **Parameters (Body):**
-        *   `Name` (string): The name of the vendor.
-        *   `Notes` (string): Any additional notes for the vendor.
-    *   **Status Codes:**
-        *   `201 Created`: Vendor created successfully.
-        *   `400 Bad Request`: Invalid input (e.g., missing name).
-        *   `401 Unauthorized`: No API key provided or API key is invalid/expired/revoked.
-        *   `403 Forbidden`: Insufficient scope or role to perform the action (Admin role required).
-        *   `409 Conflict`: Concurrency conflict.
-        *   `500 Internal Server Error`: An unexpected server error occurred.
-*   **`GET /api/v1/vendors`**
-    *   **Description:** Retrieves a paginated list of all vendors, with optional filtering and sorting.
-    *   **Required Role:** `Admin`
-    *   **Required Scope:** `vendor.read`
-    *   **Parameters (Query):**
-        *   `pageIndex` (int, optional, default: 0): The page number to retrieve.
-        *   `pageLength` (int, optional, default: 20): The number of items per page.
-        *   `filter` (string, optional): Filter criteria (see [Filtering and Sorting](#filtering-and-sorting)).
-        *   `sort` (string, optional): Sort criteria (see [Filtering and Sorting](#filtering-and-sorting)).
-    *   **Status Codes:**
-        *   `200 OK`: Successfully retrieved the list of vendors.
-        *   `400 Bad Request`: Invalid query parameters.
-        *   `401 Unauthorized`: No API key provided or API key is invalid/expired/revoked.
-        *   `403 Forbidden`: Insufficient scope or role to perform the action (Admin role required).
-*   **`GET /api/v1/vendors/{id:guid}`**
-    *   **Description:** Retrieves a specific vendor by its ID.
-    *   **Required Scope:** `vendor.read`
-    *   **Parameters (URL):**
-        *   `id` (Guid): The ID of the vendor to retrieve.
-    *   **Status Codes:**
-        *   `200 OK`: Successfully retrieved the vendor.
-        *   `401 Unauthorized`: No API key provided or API key is invalid/expired/revoked.
-        *   `403 Forbidden`: Insufficient scope or role to perform the action.
-        *   `404 Not Found`: Vendor with the specified ID not found (or not accessible by the current user).
-*   **`PUT /api/v1/vendors`**
-    *   **Description:** Updates an existing vendor.
-    *   **Required Role:** `Admin`
-    *   **Required Scope:** `vendor.update`
-    *   **Parameters (Body):**
-        *   `Id` (Guid): The ID of the vendor to update.
-        *   `Name` (string, optional): The new name of the vendor.
-        *   `Notes` (string, optional): Any updated notes for the vendor.
-    *   **Status Codes:**
-        *   `200 OK`: Vendor updated successfully.
-        *   `400 Bad Request`: Invalid input.
-        *   `401 Unauthorized`: No API key provided or API key is invalid/expired/revoked.
-        *   `403 Forbidden`: Insufficient scope or role to perform the action (Admin role required).
-        *   `404 Not Found`: Vendor with the specified ID not found.
-        *   `409 Conflict`: Concurrency conflict.
-        *   `500 Internal Server Error`: An unexpected server error occurred.
-*   **`DELETE /api/v1/vendors/{id:guid}`**
-    *   **Description:** Deletes a vendor by its ID.
-    *   **Required Role:** `Admin`
-    *   **Required Scope:** `vendor.delete`
-    *   **Parameters (URL):**
-        *   `id` (Guid): The ID of the vendor to delete.
-    *   **Status Codes:**
-        *   `204 No Content`: Vendor deleted successfully.
-        *   `401 Unauthorized`: No API key provided or API key is invalid/expired/revoked.
-        *   `403 Forbidden`: Insufficient scope or role to perform the action (Admin role required).
-        *   `404 Not Found`: Vendor with the specified ID not found.
-        *   `409 Conflict`: Concurrency conflict.
-        *   `500 Internal Server Error`: An unexpected server error occurred.
+## Publishing Firmwares
 
-### Status Controller (`/status`)
+* To create a firmware you're going to need to create a zip archive with your firmware (let's say it's called `firmware.wasm`) and a descriptor `firmware.json`:
 
-*   **`GET /status`**
-    *   **Description:** Returns "OK" to indicate the service is running.
-    *   **Required Scope:** None
-    *   **Parameters:** None
-    *   **Status Codes:**
-        *   `200 OK`: Service is running.
+    ```json
+    {
+        "EnableMultiThread": false,
+        "EnableTailCall": false,
+        "EnableGarbageCollection": false,
+        "CompilationUnits": ["firmware.wasm"],
+        "Assets": []
+    }
+    ```
 
-## Filtering and Sorting
+    To simplify packaging you can use (when testing locally!) the scripts in `Cloud/Tools`. For example to create a package for your firmware:
+    
+    ```bash
+    python twless.py firmware package firmware.wasm
+    ```
 
-For `FindAll()` endpoints, you can use the `filter` and `sort` query parameters to refine your results.
+* Now you can publish the firmware, using local development tools you can write:
 
-### Filtering (`filter` parameter)
+    ```bash
+    # $env:TW_REPOSITORY_API_KEY="<your vendor API Key>"
+    export TW_REPOSITORY_API_KEY="<your vendor API Key>"
+    python twless.py firmware upload <host name> --version=1.0
+    ```
 
-The `filter` parameter accepts a comma-separated list of filter terms. Each term specifies a field, an operator, and a value.
+## Downloading a firmware
 
-*   **Equality (`==`)**: Filters for an exact match.
-    *   Syntax: `fieldName==value`
-    *   Example: `name==MyProduct`
-*   **Contains (`~`)**: Filters for partial, case-insensitive matches (only for string fields).
-    *   Syntax: `fieldName~value`
-    *   Example: `name~prod`
+* The hub can download a firmware (the most appropriate version is returned automatically):
 
-Multiple filter terms are combined with a logical AND.
+    ```bash
+    export TW_REPOSITORY_API_KEY="<your vendor or hub API Key>"
+    python twless.py firmware download <host name> <product ID>
+    ```
 
-### Sorting (`sort` parameter)
+### Firmware Download Sequence
 
-The `sort` parameter accepts a comma-separated list of field names. Results will be sorted by these fields in the order they appear.
+```mermaid
+sequenceDiagram
+    participant Hub
+    participant Public Repository
+    participant Database
+    participant Compilation Server
+    participant Storage
+    participant Compiler
 
-*   **Ascending Order (default)**: Simply provide the field name.
-    *   Syntax: `fieldName`
-    *   Example: `name`
-*   **Descending Order**: Prefix the field name with a hyphen (`-`).
-    *   Syntax: `-fieldName`
-    *   Example: `-createdAt`
+    Hub->>Public Repository: POST /firmwares/download (productId, architecture)
+    Public Repository->>Database: Find firmware for productId
+    Database-->>Public Repository: Firmware metadata
+    Public Repository->>Compilation Server: Compile firmware(firmwareId, architecture)
+    Compilation Server->>Storage: Download WASM file
+    Storage-->>Compilation Server: WASM file
+    Compilation Server->>Compilation Server: Calculate options
+    Compilation Server->>Compiler: Compilation script
+    Compiler-->>Compilation Server: Compiled firmware
+    Compilation Server->>Compilation Server: Creates manifest
+    Compilation Server->>Compilation Server: Package firmware
+    Compilation Server-->>Public Repository: Packaged firmware
+    Public Repository-->>Hub: Compiled firmware package
+    Hub->>Hub: Install firmware
+```
 
-Multiple sort terms will apply a secondary sort if the primary sort results in ties.
+If you are interested in the compilation options then read [Compilation.md](./Compilation.md).

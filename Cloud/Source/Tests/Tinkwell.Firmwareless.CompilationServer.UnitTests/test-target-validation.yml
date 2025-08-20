@@ -1,0 +1,12 @@
+schema: 1
+validate:
+  components:
+    architecture: { any: [x86_64, aarch64] }
+    vendor: { any: [pc, apple] }
+    os: { any: [linux, windows, darwin] }
+    abi: { any: [gnu, msvc, none] }
+  rules:
+    - when: { os: linux }
+      require: { vendor: pc }
+    - when: { os: darwin }
+      require: { vendor: apple }

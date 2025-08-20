@@ -1,0 +1,20 @@
+schema: 1
+normalize:
+  architecture:
+    x64: x86_64
+  os:
+    win: windows
+meta:
+  test-linux:
+    set:
+      architecture: x86_64
+      vendor: pc
+      os: linux
+      abi: gnu
+  test-linux-crypto:
+    set:
+      architecture: x86_64
+      vendor: pc
+      os: linux
+      abi: gnu
+    features: [crypto]
