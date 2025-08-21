@@ -21,6 +21,14 @@ public sealed class Compiler
         _dockerClient = dockerClient;
         _logger = logger;
         _compilerImageName = configuration["CompilerImageName"] ?? "wamrc-compiler:latest";
+
+        _containerLimits = new(
+            configuration.GetValue<long>("ContainerMemoryLimit", 1073741824), // 1 GB
+            configuration.GetValue<long>("ContainerMemorySwapLimit", 1073741824), // 1 GB (disables swap)
+            configuration.GetValue<long>("ContainerNanoCPULimit", 1000000000), // 1 CPU core
+            configuration.GetValue<int>("ContainerPidsLimit", 100), // Limit to 100 processes
+            configuration.GetValue<int>("ContainerFilesLimit", 1024) // Limit to 1024 open files
+        );
     }
 
     public async Task<bool> CompileAsync(Request request, CancellationToken cancellationToken)
@@ -40,6 +48,8 @@ public sealed class Compiler
         return success;
     }
 
+    sealed record ContainerLimits(long Memory, long MemorySwap, long NanoCPUs, int Pids, int Files);
+    
     private const string ContainerWamrcPath = "/usr/local/wamr/bin/wamrc";
     private const string ContainerWorkingDirectory = "/app";
     private const string CompilationScriptName = "compile.sh";
@@ -49,8 +59,9 @@ public sealed class Compiler
     private readonly IDockerClient _dockerClient;
     private readonly ILogger<Compiler> _logger;
     private readonly string _compilerImageName;
+    private readonly ContainerLimits _containerLimits;
 
-    private async Task CreateCompilationScript(Request request, CancellationToken cancellationToken)
+private async Task CreateCompilationScript(Request request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Preparing the compilation script for {JobId}", request.JobId);
         List<string> compilationScript = new();
@@ -103,16 +114,30 @@ public sealed class Compiler
         // It's not even about a short delay (it doesn't change anything), probably a race condition in the docker
         // client library or the Docker service itself. Executing a script (or even the compiler itself) through bash
         // seems to work around this issue.
+        // We set limits for the container to prevent it from consuming too many resources (faulty tools, code or DoS attacks).
         string compilationScriptPathInContainer = $"{ContainerWorkingDirectory}/{CompilationScriptName}";
         var container = await _dockerClient.Containers.CreateContainerAsync(new CreateContainerParameters
         {
             Image = _compilerImageName,
             Cmd = ["bash", "-c", $"chmod +x {compilationScriptPathInContainer} && {compilationScriptPathInContainer}"],
-            HostConfig = new HostConfig { Binds = [$"{hostPath}:{ContainerWorkingDirectory}"] },
             WorkingDir = ContainerWorkingDirectory,
+            HostConfig = new HostConfig
+            {
+                Binds = [$"{hostPath}:{ContainerWorkingDirectory}"],
+                Memory = _containerLimits.Memory,
+                MemorySwap = _containerLimits.MemorySwap,
+                NanoCPUs = _containerLimits.NanoCPUs,
+                PidsLimit = _containerLimits.Pids,
+                Ulimits =
+                [
+                    new() { Name = "nofile", Soft = _containerLimits.Files, Hard = _containerLimits.Files }
+                ]
+            },
+
         }, cancellationToken);
 
-        await _dockerClient.Containers.StartContainerAsync(container.ID, null, cancellationToken);
+
+    await _dockerClient.Containers.StartContainerAsync(container.ID, null, cancellationToken);
         var waitResponse = await _dockerClient.Containers.WaitContainerAsync(container.ID, cancellationToken);
 
         if (waitResponse.StatusCode != 0)
