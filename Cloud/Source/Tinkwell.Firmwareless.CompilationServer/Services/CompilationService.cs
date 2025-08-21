@@ -61,6 +61,8 @@ public class CompilationService : ICompilationService
 
     private const string DefaultInputFileName = "firmware.wasm";
     private const string AssetsDirectoryName = "assets";
+    private const long MaximumFirmwareSize = 16 * 1024 * 1024; // 16 MB
+    private const long MaximumAssetSize = 4 * 1024 * 1024; // 4 MB
 
     private readonly Compiler _compiler;
     //private readonly BlobContainerClient _buildArtifacts;
@@ -123,6 +125,9 @@ public class CompilationService : ICompilationService
             if (entry is null)
                 throw new FileNotFoundException($"Required file {compilationUnit} not found in the archive.");
 
+            if (entry.Length > MaximumFirmwareSize)
+                throw new ArgumentException($"Compilation unit {compilationUnit} is too big: {entry.Length} bytes.");
+
             entry.ExtractToFile(outputPath, overwrite: true);
         }
 
@@ -137,6 +142,9 @@ public class CompilationService : ICompilationService
             var entry = archive.GetEntry(asset);
             if (entry is null)
                 throw new FileNotFoundException($"Required file {asset} not found in the archive.");
+
+            if (entry.Length > MaximumFirmwareSize)
+                throw new ArgumentException($"Asset {asset} is too big: {entry.Length} bytes.");
 
             entry.ExtractToFile(outputPath, overwrite: true);
         }
