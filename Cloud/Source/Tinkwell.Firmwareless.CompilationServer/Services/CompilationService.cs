@@ -1,5 +1,4 @@
 using Azure.Storage.Blobs;
-using Docker.DotNet.Models;
 using System.IO.Compression;
 using System.Text.Json;
 using Tinkkwell.Firmwareless;
@@ -102,6 +101,15 @@ public class CompilationService : ICompilationService
     {
         using var archive = ZipFile.OpenRead(zipFilePath);
         var manifest = ExtractOrCreateManifest();
+
+        if (manifest.CompilationUnits.Count == 0)
+            throw new ArgumentException("The archive must contain at least one compilation unit.");
+
+        if (new HashSet<string>(manifest.CompilationUnits).Count != manifest.CompilationUnits.Count)
+            throw new ArgumentException("Each compilation unit must be unique.");
+
+        if (new HashSet<string>(manifest.Assets).Count != manifest.Assets.Count)
+            throw new ArgumentException("Each asset must be unique.");
 
         foreach (var compilationUnit in manifest.CompilationUnits)
         {
