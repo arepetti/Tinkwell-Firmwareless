@@ -49,7 +49,7 @@ public sealed class KeysService : ServiceBase
         if (request.Role is not ("User" or "Admin"))
             throw new ArgumentException("Role must be User or Admin.", nameof(request.Role));
 
-        if (request.DaysValid < 1 || (role != UserRole.Admin && request.DaysValid > 365))
+        if (role != UserRole.Admin && (request.DaysValid < 1 || request.DaysValid > 365))
             throw new ArgumentException("Validity must be between 1 and 365 days.", nameof(request.DaysValid));
 
         if (role != UserRole.Admin && request.Role == "Admin")
@@ -58,7 +58,7 @@ public sealed class KeysService : ServiceBase
         if (request.Role == "User" && request.Scopes.Intersect(Scopes.ForbiddenForUserRole()).Any())
             throw new ForbiddenAccessException("You cannot create an API key with forbidden scopes.");
 
-        var (result, plaintext) = await UnsafeCreateWithoutValidationAsync(request, vendorSpecific: true, cancellationToken);
+        var (result, plaintext) = await UnsafeCreateWithoutValidationAsync(request, vendorSpecific: request.Role != "Admin", cancellationToken);
         return EntityToView(result, plaintext);
     }
 

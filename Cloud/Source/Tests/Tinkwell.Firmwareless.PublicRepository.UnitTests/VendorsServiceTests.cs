@@ -73,7 +73,7 @@ public class VendorsServiceTests
         var dbContext = DbContextHelper.GetInMemoryDbContext();
         var service = new VendorsService(dbContext);
         var userPrincipal = CreatePrincipal("User", [Scopes.VendorCreate]);
-        var request = new VendorsService.CreateRequest("New Vendor", "Notes");
+        var request = new VendorsService.CreateRequest("New Vendor", "", "Notes");
 
         // Act
         var action = async () => await service.CreateAsync(userPrincipal, request, CancellationToken.None);

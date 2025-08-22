@@ -1,4 +1,4 @@
-using Tinkkwell.Firmwareless;
+using Tinkwell.Firmwareless;
 
 namespace Tinkwell.Firmwareless.CompilationServer.Services;
 

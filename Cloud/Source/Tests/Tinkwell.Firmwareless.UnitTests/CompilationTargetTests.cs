@@ -1,6 +1,6 @@
 
 using FluentAssertions;
-using Tinkkwell.Firmwareless;
+using Tinkwell.Firmwareless;
 using Xunit;
 
 namespace Tinkwell.Firmwareless.UnitTests;

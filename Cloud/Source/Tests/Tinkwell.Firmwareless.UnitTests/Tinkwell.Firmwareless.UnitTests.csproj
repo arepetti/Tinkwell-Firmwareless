@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Tinkkwell.Firmwareless\Tinkkwell.Firmwareless.csproj" />
+    <ProjectReference Include="..\..\Tinkwell.Firmwareless.Cloud\Tinkwell.Firmwareless.Cloud.csproj" />
   </ItemGroup>
 
 </Project>

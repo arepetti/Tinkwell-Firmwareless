@@ -1,7 +1,7 @@
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using System.Text.Json;
-using Tinkkwell.Firmwareless;
+using Tinkwell.Firmwareless;
 
 namespace Tinkwell.Firmwareless.CompilationServer.Services;
 
@@ -26,8 +26,8 @@ public sealed class Compiler
             configuration.GetValue<long>("ContainerMemoryLimit", 1073741824), // 1 GB
             configuration.GetValue<long>("ContainerMemorySwapLimit", 1073741824), // 1 GB (disables swap)
             configuration.GetValue<long>("ContainerNanoCPULimit", 1000000000), // 1 CPU core
-            configuration.GetValue<int>("ContainerPidsLimit", 100), // Limit to 100 processes
-            configuration.GetValue<int>("ContainerFilesLimit", 1024) // Limit to 1024 open files
+            configuration.GetValue("ContainerPidsLimit", 100), // Limit to 100 processes
+            configuration.GetValue("ContainerFilesLimit", 1024) // Limit to 1024 open files
         );
     }
 

@@ -17,6 +17,7 @@ namespace Tinkwell.Firmwareless.PublicRepository.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Certificate = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: false),
                     Notes = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
@@ -35,7 +36,7 @@ namespace Tinkwell.Firmwareless.PublicRepository.Migrations
                     Role = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     Hash = table.Column<string>(type: "text", nullable: false),
                     Salt = table.Column<string>(type: "text", nullable: false),
-                    Scopes = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
+                    Scopes = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: false),
                     ExpiresAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     RevokedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     VendorId = table.Column<Guid>(type: "uuid", nullable: true),

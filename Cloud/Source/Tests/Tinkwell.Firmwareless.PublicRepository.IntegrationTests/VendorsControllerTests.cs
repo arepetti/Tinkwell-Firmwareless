@@ -25,7 +25,7 @@ public class VendorsControllerTests : IClassFixture<CustomWebApplicationFactory<
         var client = _factory.CreateClient();
         var (adminKey, _) = await CreateAdminKeyAndVendor();
         client.DefaultRequestHeaders.Add(ApiKeyAuthHandler.HeaderName, adminKey);
-        var request = new VendorsService.CreateRequest("New Vendor", "Notes");
+        var request = new VendorsService.CreateRequest("New Vendor", "", "Notes");
 
         // Act
         var response = await client.PostAsJsonAsync("/api/v1/vendors", request);
@@ -44,7 +44,7 @@ public class VendorsControllerTests : IClassFixture<CustomWebApplicationFactory<
         var client = _factory.CreateClient();
         var (userKey, _) = await CreateUserKeyAndVendor();
         client.DefaultRequestHeaders.Add(ApiKeyAuthHandler.HeaderName, userKey);
-        var request = new VendorsService.CreateRequest("New Vendor", "Notes");
+        var request = new VendorsService.CreateRequest("New Vendor", "", "Notes");
 
         // Act
         var response = await client.PostAsJsonAsync("/api/v1/vendors", request);

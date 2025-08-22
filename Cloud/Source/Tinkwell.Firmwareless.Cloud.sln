@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36301.6
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tinkwell.Firmwareless.Cloud", "Tinkwell.Firmwareless.Cloud\Tinkwell.Firmwareless.Cloud.csproj", "{24706441-92C7-4F49-A502-322B842D99CF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tinkwell.Firmwareless.AppHost", "Tinkwell.Firmwareless.AppHost\Tinkwell.Firmwareless.AppHost.csproj", "{24706441-92C7-4F49-A502-322B842D99CF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tinkwell.Firmwareless.PublicRepository", "Tinkwell.Firmwareless.PublicRepository\Tinkwell.Firmwareless.PublicRepository.csproj", "{007C68F5-CB31-C8B7-EE74-258FDCEDC988}"
 EndProject
@@ -25,7 +25,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tinkwell.Firmwareless.Wamrc
 		Tinkwell.Firmwareless.WamrcCompiler\Dockerfile = Tinkwell.Firmwareless.WamrcCompiler\Dockerfile
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tinkkwell.Firmwareless", "Tinkkwell.Firmwareless\Tinkkwell.Firmwareless.csproj", "{46A6FCAD-9215-4FF1-95D9-934EB416D4B5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tinkwell.Firmwareless.Cloud", "Tinkwell.Firmwareless.Cloud\Tinkwell.Firmwareless.Cloud.csproj", "{46A6FCAD-9215-4FF1-95D9-934EB416D4B5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tinkwell.Firmwareless.CompilationServer.UnitTests", "Tests\Tinkwell.Firmwareless.CompilationServer.UnitTests\Tinkwell.Firmwareless.CompilationServer.UnitTests.csproj", "{DF097CF4-D584-48E8-B5A3-D15DE2C7E9A1}"
 EndProject

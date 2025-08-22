@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Tinkkwell.Firmwareless;
+namespace Tinkwell.Firmwareless;
 
 public static class ServiceCollectionExtensions
 {

@@ -2,7 +2,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Tinkkwell.Firmwareless;
+namespace Tinkwell.Firmwareless;
 
 public sealed partial record CompilationTarget(
     string Architecture,

@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Tinkkwell.Firmwareless;
+namespace Tinkwell.Firmwareless;
 
 public static class WebApplicationExtensions
 {

@@ -8,12 +8,13 @@ import urllib.request
 import urllib.parse
 import json
 
+COLOR_RESET = "\033[0m"
+COLOR_BLUE = "\033[38;2;138;43;226m"
+COLOR_RED = "\033[91m"
+COLOR_WHITE = "\033[97m"
+COLOR_GREEN = "\033[92m"
+
 def select_product(api_host, api_key):
-    """
-    Retrieve products and prompt the user to select one.
-    Automatically selects the only product if there's just one.
-    Returns the selected product_id.
-    """
     products = []
     page_index = 0
     headers = {"X-Api-Key": api_key}
@@ -36,15 +37,15 @@ def select_product(api_host, api_key):
         page_index += 1
 
     if not products:
-        raise ValueError("No products found.")
+        print(f"{COLOR_RED}No products found.{COLOR_RESET}")
 
     if len(products) == 1:
-        print(f"Only one product found: {products[0]['name']}")
+        print(f"Only one product found: {COLOR_WHITE}{products[0]['name']}{COLOR_RESET}")
         return products[0]['id']
 
     print("\nAvailable products:")
     for idx, prod in enumerate(products):
-        print(f"{idx}: {prod['name']}")
+        print(f"{COLOR_GREEN}{idx}{COLOR_RESET}: {prod['name']}")
 
     while True:
         choice = input("Select a product index: ").strip()
@@ -56,10 +57,10 @@ def select_product(api_host, api_key):
 
 def main():
     parser = argparse.ArgumentParser(description="Upload firmware via multipart/form-data")
-    parser.add_argument("host", help="Base host address (e.g. https://api.example.com)")
     parser.add_argument("product_id", nargs="?", help="Product ID (GUID)")
     parser.add_argument("file", nargs="?", default="firmware.zip",
                         help="Path to firmware file to upload (default: firmware.zip)")
+    parser.add_argument("--host", help="Base host address (e.g. https://api.example.com)")
     parser.add_argument("--version", required=True, help="Firmware version (required)")
     parser.add_argument("--compatibility", default="any", help="Compatibility info")
     parser.add_argument("--type", default="Firmlet", help="Firmware type")
@@ -74,16 +75,21 @@ def main():
 
     api_key = args.api_key or os.environ.get("TW_REPOSITORY_API_KEY")
     if not api_key:
-        print("Error: API key not provided. Use --api-key or set TW_REPOSITORY_API_KEY.")
+        print(f"{COLOR_RED}Error: API key must be provided via --api-key or TW_REPOSITORY_API_KEY environment variable.{COLOR_RESET}")
+        sys.exit(1)
+
+    host = args.host or os.environ.get("TW_REPOSITORY_HOST")
+    if not host:
+        print(f"{COLOR_RED}Error: Host must be provided via --host or TW_REPOSITORY_HOST environment variable.{COLOR_RESET}")
         sys.exit(1)
 
     if not os.path.isfile(args.file):
-        print(f"Error: File '{args.file}' not found.")
+        print(f"{COLOR_RED}Error: File '{args.file}' not found.{COLOR_RESET}")
         sys.exit(1)
 
     if args.product_id is None:
-        args.product_id = select_product(args.host.rstrip('/'), api_key)
-        print(f"Using product {args.product_id}")
+        args.product_id = select_product(host.rstrip('/'), api_key)
+        print(f"Using product {COLOR_WHITE}{args.product_id}{COLOR_RESET}")
 
     boundary = uuid.uuid4().hex
     body_parts = []
@@ -117,7 +123,7 @@ def main():
     body_parts.append(f"--{boundary}--\r\n".encode())
     body = b"".join(body_parts)
 
-    url = f"{args.host.rstrip('/')}/api/v1/firmwares"
+    url = f"{host.rstrip('/')}/api/v1/firmwares"
     req = urllib.request.Request(url, data=body, method="POST")
     req.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
     req.add_header("Content-Length", str(len(body)))
@@ -129,14 +135,15 @@ def main():
             if args.output:
                 with open(args.output, "wb") as f:
                     f.write(resp_data)
-                print(f"Response saved to {args.output}")
+                print(f"Response saved to {COLOR_BLUE}{args.output}{COLOR_BLUE}")
             else:
-                print(resp_data.decode(errors="ignore"))
+                result = json.loads(resp_data)
+                print(f"ID: {COLOR_BLUE}{result.get('id')}{COLOR_RESET}")
     except urllib.error.HTTPError as e:
-        print(f"HTTP error {e.code}: {e.reason}")
+        print(f"{COLOR_RED}Error {e.code}: {e.reason}{COLOR_RESET}")
         print(e.read().decode(errors="ignore"))
     except urllib.error.URLError as e:
-        print(f"Connection error: {e.reason}")
+        print(f"{COLOR_RED}Connection error: {e.reason}{COLOR_RESET}")
 
 if __name__ == "__main__":
     main()

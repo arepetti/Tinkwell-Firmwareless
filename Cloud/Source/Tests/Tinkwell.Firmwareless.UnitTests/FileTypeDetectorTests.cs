@@ -1,7 +1,7 @@
 
 using FluentAssertions;
 using System.IO;
-using Tinkkwell.Firmwareless;
+using Tinkwell.Firmwareless;
 using Xunit;
 
 namespace Tinkwell.Firmwareless.UnitTests;

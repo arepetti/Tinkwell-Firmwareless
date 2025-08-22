@@ -1,7 +1,7 @@
 using FluentAssertions;
 using System.Collections.Generic;
 using System.IO;
-using Tinkkwell.Firmwareless;
+using Tinkwell.Firmwareless;
 using Tinkwell.Firmwareless.CompilationServer.Services;
 using Xunit;
 

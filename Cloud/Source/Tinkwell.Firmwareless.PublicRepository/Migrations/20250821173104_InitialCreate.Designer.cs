@@ -12,7 +12,7 @@ using Tinkwell.Firmwareless.PublicRepository.Database;
 namespace Tinkwell.Firmwareless.PublicRepository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250813195139_InitialCreate")]
+    [Migration("20250821173104_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -60,8 +60,8 @@ namespace Tinkwell.Firmwareless.PublicRepository.Migrations
 
                     b.Property<string>("Scopes")
                         .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -173,6 +173,11 @@ namespace Tinkwell.Firmwareless.PublicRepository.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Certificate")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");

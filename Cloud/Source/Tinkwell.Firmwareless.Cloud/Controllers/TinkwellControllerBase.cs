@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Tinkwell.Firmwareless.Exceptions;
@@ -13,9 +14,12 @@ public abstract class TinkwellControllerBase(ILogger logger) : ControllerBase
         {
             return await func();
         }
-        catch (ForbiddenAccessException)
+        catch (ForbiddenAccessException e)
         {
-            return Forbid();
+            return new ObjectResult(new ErrorResponse(e.Message))
+            {
+                StatusCode = StatusCodes.Status403Forbidden
+            };
         }
         catch (UnauthorizedAccessException e)
         { 
@@ -30,6 +34,10 @@ public abstract class TinkwellControllerBase(ILogger logger) : ControllerBase
             return BadRequest(new ErrorResponse(e.Message, e.ParamName));
         }
         catch (FormatException e)
+        {
+            return BadRequest(new ErrorResponse(e.Message));
+        }
+        catch (InvalidOperationException e)
         {
             return BadRequest(new ErrorResponse(e.Message));
         }

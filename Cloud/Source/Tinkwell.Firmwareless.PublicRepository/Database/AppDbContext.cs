@@ -18,7 +18,7 @@ public sealed class AppDbContext : DbContext
             entity.HasIndex(x => x.Role);
             entity.Property(x => x.Name).HasMaxLength(200);
             entity.Property(x => x.Role).HasMaxLength(20);
-            entity.Property(x => x.Scopes).HasMaxLength(2000);
+            entity.Property(x => x.Scopes).HasMaxLength(2 * 1024);
 
             entity
                 .HasOne(a => a.Vendor)
@@ -31,6 +31,7 @@ public sealed class AppDbContext : DbContext
         {
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Name).HasMaxLength(200);
+            entity.Property(x => x.Certificate).HasMaxLength(2 * 1024);
             entity.Property(x => x.Notes).HasMaxLength(1024);
         });
 

@@ -7,7 +7,7 @@ namespace Tinkwell.Firmwareless.PublicRepository.Database;
 
 static class WebApplicationExtensions
 {
-    private const int MaxRetries = 5;
+    private const int MaxRetries = 10;
     private const int DelayBetweenRetries = 1000;
 
     public static async Task ApplyMigrationsAsync(this WebApplication app, IServiceScope scope)

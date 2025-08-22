@@ -8,7 +8,7 @@ using Tinkwell.Firmwareless.PublicRepository.Services;
 using System.Security.Claims;
 using Tinkwell.Firmwareless.PublicRepository.Controllers;
 using System.Net.Http.Json;
-using Tinkkwell.Firmwareless;
+using Tinkwell.Firmwareless;
 using Tinkwell.Firmwareless.Controllers;
 
 namespace Tinkwell.Firmwareless.PublicRepository.IntegrationTests;

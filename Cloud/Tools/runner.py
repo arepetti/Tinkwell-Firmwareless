@@ -5,17 +5,15 @@ import os
 import subprocess
 
 def main():
-    base_name = os.path.splitext(os.path.basename(__file__))[0]
-
     if len(sys.argv) < 3:
-        print(f"Usage: python {base_name}.py <domain> <verb> [other-options...]")
+        print(f"Usage: twless <domain> <verb> [other-options...]")
         sys.exit(1)
 
     domain = sys.argv[1]
     verb = sys.argv[2]
     other_args = sys.argv[3:]
 
-    target_script = f"{base_name}-{domain}-{verb}.py"
+    target_script = f"twless-{domain}-{verb}.py"
     script_path = os.path.join(os.path.dirname(__file__), target_script)
 
     if not os.path.isfile(script_path):

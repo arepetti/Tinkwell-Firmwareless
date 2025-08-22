@@ -12,11 +12,11 @@ namespace Tinkwell.Firmwareless.PublicRepository.Services;
 
 public sealed class VendorsService(AppDbContext db) : ServiceBase(db)
 {
-    public sealed record CreateRequest(string Name, string Notes);
+    public sealed record CreateRequest(string Name, string Certificate, string Notes);
 
-    public sealed record UpdateRequest(Guid Id, string? Name, string? Notes);
+    public sealed record UpdateRequest(Guid Id, string? Name, string? Certificate, string? Notes);
 
-    public sealed record View(Guid Id, string Name, string Notes, DateTimeOffset CreatedAt);
+    public sealed record View(Guid Id, string Name, string Certificate, string Notes, DateTimeOffset CreatedAt);
 
     public async Task<View> CreateAsync(ClaimsPrincipal user, CreateRequest request, CancellationToken cancellationToken)
     {
@@ -34,6 +34,7 @@ public sealed class VendorsService(AppDbContext db) : ServiceBase(db)
             Id = Guid.NewGuid(),
             Name = request.Name,
             Notes = request.Notes,
+            Certificate = request.Certificate,
             CreatedAt = DateTimeOffset.UtcNow,
         };
 
@@ -87,6 +88,9 @@ public sealed class VendorsService(AppDbContext db) : ServiceBase(db)
         if (role != UserRole.Admin || !scopes.Contains(Scopes.VendorUpdate))
             throw new ForbiddenAccessException();
 
+        if (role != UserRole.Admin && !string.IsNullOrWhiteSpace(request.Certificate))
+            throw new ForbiddenAccessException();
+
         var entity = await TryFindAsync(role, vendorId, request.Id, cancellationToken);
         if (entity is null)
             throw new NotFoundException(request.Id.ToString(), nameof(request.Id));
@@ -94,6 +98,9 @@ public sealed class VendorsService(AppDbContext db) : ServiceBase(db)
         if (request.Name is not null)
             entity.Name = request.Name;
 
+        if (request.Certificate is not null)
+            entity.Certificate = request.Certificate;
+        
         if (request.Notes is not null)
             entity.Notes = request.Notes;
 
@@ -125,6 +132,7 @@ public sealed class VendorsService(AppDbContext db) : ServiceBase(db)
         return new View(
             entity.Id,
             entity.Name,
+            entity.Certificate,
             entity.Notes,
             entity.CreatedAt);
     }

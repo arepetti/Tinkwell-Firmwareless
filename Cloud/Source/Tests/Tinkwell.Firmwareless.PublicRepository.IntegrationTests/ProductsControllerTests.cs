@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
-using Tinkkwell.Firmwareless;
+using Tinkwell.Firmwareless;
 using Tinkwell.Firmwareless.Controllers;
 using Tinkwell.Firmwareless.PublicRepository.Authentication;
 using Tinkwell.Firmwareless.PublicRepository.Database;

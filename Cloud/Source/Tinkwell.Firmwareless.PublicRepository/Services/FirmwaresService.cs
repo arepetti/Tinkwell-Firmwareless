@@ -28,6 +28,7 @@ public sealed class FirmwaresService(ILogger<FirmwaresService> logger, AppDbCont
         Debug.Assert(user is not null);
         Debug.Assert(request is not null);
 
+        // Basic firmware payload validation
         if (request.File.Length > _uploadOpts.MaxFirmwareSizeBytes)
             throw new ArgumentException($"Firmware size cannot exceed {_uploadOpts.MaxFirmwareSizeBytes / 1024 / 1024} MB.", nameof(request.File));
 
@@ -43,6 +44,7 @@ public sealed class FirmwaresService(ILogger<FirmwaresService> logger, AppDbCont
             // a parameter for FormFile constructor but you'd expect it to default to something instead of blindly throwing an exception.
         }
 
+        // Check for permissions and request validity
         var (role, scopes, vendorId) = user.GetScopesAndVendorId();
         if (!scopes.Contains(Scopes.FirmwareCreate))
             throw new ForbiddenAccessException();
@@ -58,8 +60,9 @@ public sealed class FirmwaresService(ILogger<FirmwaresService> logger, AppDbCont
             throw new NotFoundException(request.ProductId.ToString(), nameof(request.ProductId));
 
         if (role != UserRole.Admin && product.VendorId != vendorId)
-            throw new ForbiddenAccessException();
+            throw new ForbiddenAccessException($"Resource {product.VendorId} does not belong to this API Key {vendorId}.");
 
+        // Check for existing firmware with same version and compatibility
         var currentFirmware = await FindApplicableFirmwareAsync(request.ProductId, request.Type, cancellationToken);
         if (currentFirmware is not null)
         {
@@ -75,6 +78,15 @@ public sealed class FirmwaresService(ILogger<FirmwaresService> logger, AppDbCont
             }
         }
 
+        // Check the firmware package integrity and signature. We want to be sure there isn't a MITM between the public
+        // repository and the build machine/vendor.
+        using var tempFile = new TemporaryFile();
+        using var stream = request.File.OpenReadStream();
+        await tempFile.WriteFromStream(stream, cancellationToken);
+
+        FirmwarePackageValidator.Validate(tempFile.Path, product.Vendor.Certificate);
+
+        // All good, create the firmware record and upload the file to blob storage
         var entity = new Firmware
         {
             Id = Guid.NewGuid(),
@@ -96,8 +108,7 @@ public sealed class FirmwaresService(ILogger<FirmwaresService> logger, AppDbCont
 
         try
         {
-            using var stream = request.File.OpenReadStream();
-            await UploadAsync(entity, stream, cancellationToken);
+            await UploadAsync(entity, tempFile.Path, cancellationToken);
         }
         catch
         {
@@ -255,7 +266,7 @@ public sealed class FirmwaresService(ILogger<FirmwaresService> logger, AppDbCont
             .FirstOrDefault();
     }
 
-    private async Task<string> UploadAsync(Firmware firmware, Stream stream, CancellationToken cancellationToken)
+    private async Task<string> UploadAsync(Firmware firmware, string path, CancellationToken cancellationToken)
     {
         string blobName = GetBlobName(firmware);
         _logger.LogInformation("Uploading firmware {FirmwareId} to blob storage as {BlobName}.", firmware.Id, blobName);
@@ -263,7 +274,7 @@ public sealed class FirmwaresService(ILogger<FirmwaresService> logger, AppDbCont
         await _blob.CreateIfNotExistsAsync(cancellationToken: cancellationToken);
         var blobClient = _blob.GetBlobClient(blobName);
 
-        await blobClient.UploadAsync(stream, overwrite: true, cancellationToken);
+        await blobClient.UploadAsync(path, overwrite: true, cancellationToken);
 
         var tags = new Dictionary<string, string>
         {
@@ -276,15 +287,12 @@ public sealed class FirmwaresService(ILogger<FirmwaresService> logger, AppDbCont
             { "firmware_version", firmware.Version },
             { "firmware_type", firmware.Type.ToString().ToLowerInvariant() },
             { "firmware_status", firmware.Status.ToString().ToLowerInvariant() },
-            { "copyright", FirstNotEmpty(firmware.Copyright, firmware.Author, firmware.Product.Vendor.Name) },
+            { "certificate", firmware.Product.Vendor.Certificate },
         };
 
         await blobClient.SetTagsAsync(tags, cancellationToken: cancellationToken);
 
         return blobClient.Uri.ToString();
-
-        string FirstNotEmpty(params string[] values)
-            => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "";
     }
 
     private static string GetBlobName(Firmware firmware)

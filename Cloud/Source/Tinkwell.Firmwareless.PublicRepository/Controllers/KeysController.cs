@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using Tinkwell.Firmwareless.Controllers;
 using Tinkwell.Firmwareless.PublicRepository.Services;
 using Tinkwell.Firmwareless.PublicRepository.Services.Queries;
@@ -44,6 +45,18 @@ public sealed class KeysController(ILogger<KeysController> logger, KeysService s
         return await Try(async () =>
         {
             return Ok(await _service.FindAsync(HttpContext.User, id, ct));
+        });
+    }
+
+    [HttpPost("this/revoke")]
+    [Authorize(Policy = "Admin")]
+    public async Task<IActionResult> RevokeThis(CancellationToken ct)
+    {
+        return await Try(async () =>
+        {
+            Guid id = Guid.Parse(HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            await _service.RevokeAsync(HttpContext.User, id, ct);
+            return NoContent();
         });
     }
 

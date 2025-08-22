@@ -1,6 +1,6 @@
 ﻿using Azure.Storage.Blobs;
 
-namespace Tinkkwell.Firmwareless;
+namespace Tinkwell.Firmwareless;
 
 public interface IBlobContainerClientFactory
 {

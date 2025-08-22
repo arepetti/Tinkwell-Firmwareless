@@ -1,7 +1,7 @@
 using Azure.Storage.Blobs;
 using System.IO.Compression;
 using System.Text.Json;
-using Tinkkwell.Firmwareless;
+using Tinkwell.Firmwareless;
 using Tinkwell.Firmwareless.Controllers;
 
 namespace Tinkwell.Firmwareless.CompilationServer.Services;
@@ -101,6 +101,11 @@ public class CompilationService : ICompilationService
 
     private (CompilationManifest Manifest, Dictionary<string, string> Metadata) HandleZippedFirmware(CompilationRequest request, IDictionary<string, string> tags, string workingDirectory, string zipFilePath)
     {
+        // First of all validate the package integrity and authenticity
+        if (tags.TryGetValue("certificate", out var publicKeyPem))
+            FirmwarePackageValidator.Validate(zipFilePath, publicKeyPem);
+
+        // Then we can validate and extract the content
         using var archive = ZipFile.OpenRead(zipFilePath);
         var manifest = ExtractOrCreateManifest();
 
@@ -143,12 +148,13 @@ public class CompilationService : ICompilationService
             if (entry is null)
                 throw new FileNotFoundException($"Required file {asset} not found in the archive.");
 
-            if (entry.Length > MaximumFirmwareSize)
+            if (entry.Length > MaximumAssetSize)
                 throw new ArgumentException($"Asset {asset} is too big: {entry.Length} bytes.");
 
             entry.ExtractToFile(outputPath, overwrite: true);
         }
 
+        // Now we calculate the permissions needed by this firmware according to the manifest
         var permissions = new List<string>();
         if (manifest.EnableGarbageCollection)
             permissions.Add("runtime.gc");

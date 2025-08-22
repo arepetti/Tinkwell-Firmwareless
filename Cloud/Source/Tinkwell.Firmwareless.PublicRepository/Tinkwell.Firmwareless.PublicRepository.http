@@ -1,13 +1,23 @@
 @Tinkwell.Firmwareless.PublicRepository_HostAddress = http://localhost:5165
-@AdminApiKey = ak_0-acX26JskGfnWN1MXYLzKBmIHxoXaSv
-@HubApiKey = ak_Dcg0SZxLVkW5SwU_cDxohqOeoRTSLnGX
+@AdminApiKey = ak_JM1BIDfEhkO6iz4Jmadpb0PnOi0S-ySH
+@HubApiKey = ak_FIDPQwZbHEWLH1G6UQGyMir7BKV33-YY
 
-@VendorId = a829b5cd-0b7c-4393-bdd3-a8d1afef7e8d
-@UserApiKey = ak_05SYE8bZa0OsRgyD1VWyfEuRTIH51HbZ
-@ProductId = 3b0c3734-7f5b-424c-aa70-edc4e9c8f119
+@VendorId = d68a3212-8ffd-4fa9-a296-5177b6505993
+@UserApiKey = ak_hUrJKX5TVUGoREgGpQw1M-TiSguFrLq6
+@ProductId = 890fd633-c5b7-4ea9-bd44-d797f24c6f89
 
 ### Step 0: check connectivity
 GET {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/status
+
+### Step 1: create a new vendor
+POST {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/api/v1/keys
+X-Api-Key: {{AdminApiKey}}
+Content-Type: application/json
+
+{
+  "name": "Test Vendor",
+  "notes": ""
+}
 
 ### Step 1: create a new vendor
 POST {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/api/v1/vendors
@@ -18,6 +28,10 @@ Content-Type: application/json
   "name": "Test Vendor",
   "notes": ""
 }
+
+### Step 1b: list vendors
+GET {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/api/v1/vendors
+X-Api-Key: {{AdminApiKey}}
 
 ### Step 2: create a new API key for that vendor
 POST {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/api/v1/keys
