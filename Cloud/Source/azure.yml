@@ -22,6 +22,8 @@ services:
     project: ./Tinkwell.Firmwareless.CompilationServer
     language: dotnet
     host: containerapp
+    config:
+      AzureKeyVaults__keyvault__VaultUri: ${{services.keyvault.outputs.uri}}
     ingress:
       external: false
     bindings:

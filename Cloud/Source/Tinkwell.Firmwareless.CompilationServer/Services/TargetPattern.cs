@@ -1,8 +1,6 @@
-using Docker.DotNet.Models;
 using System.Collections.Concurrent;
 using System.Text;
 using System.Text.RegularExpressions;
-using static Tinkwell.Firmwareless.CompilationServer.Services.ValidationRulesParser;
 
 namespace Tinkwell.Firmwareless.CompilationServer.Services;
 
@@ -45,7 +43,6 @@ static class TargetPattern
         {
             if (c == '*')
             {
-                // starStopsAtDash = true
                 sb.Append("[^-]*");
             }
             else

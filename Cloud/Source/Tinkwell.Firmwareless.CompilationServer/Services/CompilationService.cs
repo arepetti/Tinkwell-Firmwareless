@@ -1,36 +1,32 @@
 using Azure.Storage.Blobs;
 using System.IO.Compression;
 using System.Text.Json;
-using Tinkwell.Firmwareless;
 using Tinkwell.Firmwareless.Controllers;
 
 namespace Tinkwell.Firmwareless.CompilationServer.Services;
 
 public class CompilationService : ICompilationService
 {
-    public CompilationService(ILogger<CompilationService> logger, IBlobContainerClientFactory blobFactory, Compiler compiler)
+    public CompilationService(ILogger<CompilationService> logger, IBlobContainerClientFactory blobFactory, CompiledFirmwareArchive archive, Compiler compiler)
     {
         _compiler = compiler;
         _sourceArtifacts = blobFactory.GetBlobContainerClient("tinkwell-firmwarestore-assets");
         //_buildArtifacts = blobFactory.GetBlobContainerClient("tinkwell-firmwarestore-builds");
         _logger = logger;
+        _archive = archive;
     }
 
     public async Task<Stream> CompileAsync(CompilationRequest request, CancellationToken cancellationToken)
     {
-        var jobId = Guid.NewGuid().ToString("N");
-        var workingDirectory = Path.Combine(Path.GetTempPath(), jobId);
-        _logger.LogInformation("Starting compilation job {JobId} in {Path}", jobId, workingDirectory);
-
-        Directory.CreateDirectory(workingDirectory);
-        Directory.CreateDirectory(Path.Combine(workingDirectory, AssetsDirectoryName));
+        using var job = new CompilationJob();
+        _logger.LogInformation("Starting compilation job {JobId} in {Path}", job.Id, job.WorkingDirectoryPath);
 
         try
         {
-            var (manifest, metadata) = await DownloadSourceBlob(request, workingDirectory, cancellationToken);
+            var (manifest, metadata) = await DownloadSourceBlob(request, job.WorkingDirectoryPath, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
 
-            var parameters = new Compiler.Request(jobId, workingDirectory, request.Architecture)
+            var parameters = new Compiler.Request(job.Id, job.WorkingDirectoryPath, request.Architecture)
             { 
                 GetOutputFileName = GetOutputFileName,
                 Manifest = manifest,
@@ -38,28 +34,17 @@ public class CompilationService : ICompilationService
             };
 
             await _compiler.CompileAsync(parameters, cancellationToken);
-            return PackageOutputAsZip(workingDirectory, manifest);
+            return await PackageOutputAsZipAsync(job.WorkingDirectoryPath, manifest, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during compilation job {JobId}", jobId);
+            _logger.LogError(ex, "Error during compilation job {JobId}", job.Id);
             throw;
-        }
-        finally
-        {
-            _logger.LogInformation("Cleaning up temporary directory {Path}", workingDirectory);
-            try
-            {
-                Directory.Delete(workingDirectory, recursive: true);
-            }
-            catch (Exception e)
-            {
-                _logger.LogWarning(e, "Error deleting directory content: {Reason}", e.Message);
-            }
         }
     }
 
-    private const string DefaultInputFileName = "firmware.wasm";
+    private const string CompilationOptionsFileName = "firmware.json";
+    private const string CompiledFirmwareManifestFileName = "package.json";
     private const string AssetsDirectoryName = "assets";
     private const long MaximumFirmwareSize = 16 * 1024 * 1024; // 16 MB
     private const long MaximumAssetSize = 4 * 1024 * 1024; // 4 MB
@@ -68,6 +53,7 @@ public class CompilationService : ICompilationService
     //private readonly BlobContainerClient _buildArtifacts;
     private readonly BlobContainerClient _sourceArtifacts;
     private readonly ILogger<CompilationService> _logger;
+    private readonly CompiledFirmwareArchive _archive;
 
     private async Task<(CompilationManifest Manifest, Dictionary<string, string> Metadata)> DownloadSourceBlob(CompilationRequest request, string workingDirectory, CancellationToken cancellationToken)
     {
@@ -78,26 +64,14 @@ public class CompilationService : ICompilationService
         await sourceBlobClient.DownloadToAsync(downloadedFirmwarePath, cancellationToken);
         var tags = await sourceBlobClient.GetTagsAsync(cancellationToken: cancellationToken);
 
-        return FileTypeDetector.Detect(downloadedFirmwarePath) switch
-        {
-            FileTypeDetector.FileType.Wasm => HandleSingleFileFirmware(request, tags.Value.Tags, workingDirectory, downloadedFirmwarePath),
-            FileTypeDetector.FileType.Zip => HandleZippedFirmware(request, tags.Value.Tags, workingDirectory, downloadedFirmwarePath),
-            _ => throw new ArgumentException("Unsupported file type for compilation."),
-        };
+        if (FileTypeDetector.Detect(downloadedFirmwarePath) != FileTypeDetector.FileType.Zip)
+            throw new ArgumentException("Unsupported file type for compilation.");
+
+        return HandleZippedFirmware(request, tags.Value.Tags, workingDirectory, downloadedFirmwarePath);
     }
 
     private static string GetOutputFileName(string inputFileName)
         => Path.ChangeExtension(Path.GetFileName(inputFileName), ".aot");
-
-    private static (CompilationManifest Manifest, Dictionary<string, string> Metadata) HandleSingleFileFirmware(CompilationRequest request, IDictionary<string, string> tags, string workingDirectory, string firmwareFilePath)
-    {
-        string defaultPath = Path.Combine(workingDirectory, DefaultInputFileName);
-        File.Move(firmwareFilePath, defaultPath, overwrite: true);
-        var manifest = new CompilationManifest();
-        manifest.CompilationUnits.Add(DefaultInputFileName);
-
-        return (manifest, CreateMetadata(request, tags, []));
-    }
 
     private (CompilationManifest Manifest, Dictionary<string, string> Metadata) HandleZippedFirmware(CompilationRequest request, IDictionary<string, string> tags, string workingDirectory, string zipFilePath)
     {
@@ -169,7 +143,7 @@ public class CompilationService : ICompilationService
 
         CompilationManifest ExtractOrCreateManifest()
         {
-            var manifestEntry = archive.GetEntry("firmware.json");
+            var manifestEntry = archive.GetEntry(CompilationOptionsFileName);
             if (manifestEntry is not null)
             {
                 using var stream = manifestEntry.Open();
@@ -180,43 +154,45 @@ public class CompilationService : ICompilationService
         }
     }
 
-    private Stream PackageOutputAsZip(string workingDirectory, CompilationManifest manifest)
+    private async Task<Stream> PackageOutputAsZipAsync(string workingDirectory, CompilationManifest manifest, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Packaging compilation output as zip archive");
-        var zipStream = new MemoryStream();
-        using (var archive = new ZipArchive(zipStream, ZipArchiveMode.Create, true))
+
+        foreach (var unit in manifest.CompilationUnits)
         {
-            foreach (var unit in manifest.CompilationUnits)
-            {
-                _logger.LogDebug("Adding file {FileName} to archive", unit);
-                archive.CreateEntryFromFile(Path.Combine(workingDirectory, unit), $"src/{unit}");
+            _logger.LogDebug("Adding file {FileName} to archive", unit);
+            await _archive.AddFileAsync(Path.Combine(workingDirectory, unit), $"src/{unit}", cancellationToken);
 
-                string compiledUnitPath = Path.Combine(workingDirectory, GetOutputFileName(unit));
-                string compiledUnitFileName = Path.GetFileName(compiledUnitPath);
-                _logger.LogDebug("Adding file {FileName} to archive", compiledUnitFileName);
-                archive.CreateEntryFromFile(compiledUnitPath, compiledUnitFileName);
-            }
+            string compiledUnitPath = Path.Combine(workingDirectory, GetOutputFileName(unit));
+            string compiledUnitFileName = Path.GetFileName(compiledUnitPath);
 
-            foreach (var sourceRelativePath in manifest.Assets)
-            {
-                _logger.LogDebug("Adding file {FileName} to archive", sourceRelativePath);
-                archive.CreateEntryFromFile(Path.Combine(workingDirectory, sourceRelativePath), $"assets/{sourceRelativePath}");
-            }
-
-            var firmwareJsonPath = Path.Combine(workingDirectory, "package.json");
-            if (File.Exists(firmwareJsonPath))
-                archive.CreateEntryFromFile(firmwareJsonPath, "package.json");
-
-            var stdoutPath = Path.Combine(workingDirectory, "stdout.txt");
-            if (File.Exists(stdoutPath))
-                archive.CreateEntryFromFile(stdoutPath, "log/stdout.txt");
-
-            var stderrPath = Path.Combine(workingDirectory, "stderr.txt");
-            if (File.Exists(stderrPath))
-                archive.CreateEntryFromFile(stderrPath, "log/stderr.txt");
+            _logger.LogDebug("Adding file {FileName} to archive", compiledUnitFileName);
+            await _archive.AddFileAsync(compiledUnitPath, compiledUnitFileName, cancellationToken);
         }
-        zipStream.Position = 0;
-        return zipStream;
+
+        foreach (var sourceRelativePath in manifest.Assets)
+        {
+            _logger.LogDebug("Adding file {FileName} to archive", sourceRelativePath);
+            var assetFilePath = Path.Combine(workingDirectory, sourceRelativePath);
+            var assetFileName = $"{AssetsDirectoryName}/{sourceRelativePath}";
+            await _archive.AddFileAsync(assetFilePath, assetFileName, cancellationToken);
+        }
+
+        var firmwareJsonPath = Path.Combine(workingDirectory, CompiledFirmwareManifestFileName);
+        if (File.Exists(firmwareJsonPath))
+            await _archive.AddFileAsync(firmwareJsonPath, CompiledFirmwareManifestFileName, cancellationToken);
+
+        var stdoutPath = Path.Combine(workingDirectory, "stdout.txt");
+        if (File.Exists(stdoutPath))
+            await _archive.AddFileAsync(stdoutPath, "log/stdout.txt", cancellationToken);
+
+        var stderrPath = Path.Combine(workingDirectory, "stderr.txt");
+        if (File.Exists(stderrPath))
+            await _archive.AddFileAsync(stderrPath, "log/stderr.txt", cancellationToken);
+
+        await _archive.FreezeAsync(cancellationToken);
+
+        return _archive.Stream;
     }
 
     private static bool IsSafeRelativePath(string path)
