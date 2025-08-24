@@ -1,11 +1,14 @@
+using Tinkwell.Firmwareless.Controllers;
+
 namespace Tinkwell.Firmwareless.CompilationServer.Services;
 
-sealed class CompilationJob : IDisposable
+public sealed class CompilationJob : IDisposable
 {
-    public CompilationJob()
+    public CompilationJob(CompilationRequest request)
     {
         Id = Guid.NewGuid().ToString("N");
         WorkingDirectoryPath = Path.Combine(Path.GetTempPath(), Id);
+        Request = request;
 
         Directory.CreateDirectory(WorkingDirectoryPath);
         Directory.CreateDirectory(Path.Combine(WorkingDirectoryPath, "assets"));
@@ -14,6 +17,10 @@ sealed class CompilationJob : IDisposable
     public string Id { get; }
 
     public string WorkingDirectoryPath { get; }
+
+    public CompilationRequest Request { get; }
+
+    public CompilationManifest? Manifest { get; set; }
 
     public void Dispose()
     {

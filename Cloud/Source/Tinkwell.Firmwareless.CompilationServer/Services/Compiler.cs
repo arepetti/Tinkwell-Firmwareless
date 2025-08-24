@@ -1,7 +1,6 @@
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using System.Text.Json;
-using Tinkwell.Firmwareless;
 
 namespace Tinkwell.Firmwareless.CompilationServer.Services;
 
@@ -20,14 +19,14 @@ public sealed class Compiler
     {
         _dockerClient = dockerClient;
         _logger = logger;
-        _compilerImageName = configuration["CompilerImageName"] ?? "wamrc-compiler:latest";
+        _compilerImageName = configuration["CompilerImageName"] ?? Names.CompilerImageName;
 
         _containerLimits = new(
-            configuration.GetValue<long>("ContainerMemoryLimit", 1073741824), // 1 GB
-            configuration.GetValue<long>("ContainerMemorySwapLimit", 1073741824), // 1 GB (disables swap)
-            configuration.GetValue<long>("ContainerNanoCPULimit", 1000000000), // 1 CPU core
-            configuration.GetValue("ContainerPidsLimit", 100), // Limit to 100 processes
-            configuration.GetValue("ContainerFilesLimit", 1024) // Limit to 1024 open files
+            configuration.GetValue("ContainerMemoryLimit", DefaultLimits.Memory),
+            configuration.GetValue("ContainerMemorySwapLimit", DefaultLimits.MemorySwap),
+            configuration.GetValue("ContainerNanoCpuLimit", DefaultLimits.NanoCpus),
+            configuration.GetValue("ContainerPidsLimit", DefaultLimits.Pids),
+            configuration.GetValue("ContainerFilesLimit", DefaultLimits.Files)
         );
     }
 
@@ -37,13 +36,13 @@ public sealed class Compiler
 
         await CreateCompilationScript(request, cancellationToken);
         var (success, stdout, stderr) = await RunCompilerContainerAsync(request.WorkingDirectory, cancellationToken);
-        await File.WriteAllTextAsync(Path.Combine(request.WorkingDirectory, "stdout.txt"), stdout, cancellationToken);
-        await File.WriteAllTextAsync(Path.Combine(request.WorkingDirectory, "stderr.txt"), stderr, cancellationToken);
+        await File.WriteAllTextAsync(Path.Combine(request.WorkingDirectory, Names.CompilerStdoutFileName), stdout, cancellationToken);
+        await File.WriteAllTextAsync(Path.Combine(request.WorkingDirectory, Names.CompilerStderrFileName), stderr, cancellationToken);
 
         request.Metadata.Add("compiler_name", "wamrc");
         request.Metadata.Add("compiler_success", success.ToString().ToLowerInvariant());
         var metadata = JsonSerializer.Serialize(request.Metadata, JsonDefaults.Options);
-        await File.WriteAllTextAsync(Path.Combine(request.WorkingDirectory, "package.json"), metadata, cancellationToken);
+        await File.WriteAllTextAsync(Path.Combine(request.WorkingDirectory, Names.CompiledFirmwareManifestEntryName), metadata, cancellationToken);
 
         return success;
     }
@@ -61,7 +60,7 @@ public sealed class Compiler
     private readonly string _compilerImageName;
     private readonly ContainerLimits _containerLimits;
 
-private async Task CreateCompilationScript(Request request, CancellationToken cancellationToken)
+    private async Task CreateCompilationScript(Request request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Preparing the compilation script for {JobId}", request.JobId);
         List<string> compilationScript = new();
@@ -85,9 +84,9 @@ private async Task CreateCompilationScript(Request request, CancellationToken ca
     {
         var builder = new CompilerOptionsBuilder(CompilationTarget.Parse(request.Target));
         builder.WithFiles([($"{ContainerWorkingDirectory}/{input}", $"{ContainerWorkingDirectory}/{output}")]);
-        builder.UseMetaArchitectures("meta-architectures.yml");
-        builder.UseValidation("target-validation.yml");
-        builder.UseCompilerConfiguration("target-options.yml");
+        builder.UseMetaArchitectures(Names.CompilerMetaArchitecturesFileName);
+        builder.UseValidation(Names.CompilerTargetValidationFileName);
+        builder.UseCompilerConfiguration(Names.CompilerTargetOptionsFileName);
 
         var options = new CompilerOptionsBuilderOptions
         {
