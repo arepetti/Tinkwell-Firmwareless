@@ -62,11 +62,13 @@ public sealed class Compiler
 
     private async Task CreateCompilationScript(Request request, CancellationToken cancellationToken)
     {
+        // When should we move to a template file instead of manually building the script here?
         _logger.LogInformation("Preparing the compilation script for {JobId}", request.JobId);
-        List<string> compilationScript = new();
+        List<string> compilationScript = ["#!/bin/bash\r\n", "set -e"];
         foreach (var unit in request.Manifest.CompilationUnits)
         {
             compilationScript.Add($"while [ ! -f \"{ContainerWorkingDirectory}/{unit}\" ]; do sleep 1; done");
+            compilationScript.Add($"wasm-validate --enable-all \"{ContainerWorkingDirectory}/{unit}\"");
             var args = GetCompilerArgs(request, unit, request.GetOutputFileName(unit));
             string[] command = [ContainerWamrcPath, .. args];
             compilationScript.Add(string.Join(' ', command));

@@ -18,14 +18,15 @@ This is the most critical threat to the platform, as it directly affects the end
 #### Current Mitigations:
 1.  **Vendor Authentication:** The `PublicRepository` requires an `X-Api-Key` for all upload operations, preventing anonymous uploads. (Ref: `ApiKeyAuthHandler.cs`)
 2.  **Package Integrity Verification:** The `FirmwareSourcePackageValidator.cs` implements a robust check. It requires that the uploaded ZIP contains a manifest of file hashes and that this manifest is signed with the vendor's private key. The server verifies this using the vendor's public key. This is an excellent mitigation against tampering in transit and ensures the vendor's identity.
+3.  **WASM validation:** `CompilationServer` generates a compilation script; the first step, before invoking `wamrc`, is the validation on the `.wasm` modules using `wasm-validate`.
 
 #### Additional Mitigations:
-1.  **Static Analysis of WASM:** Before compilation, the `CompilationServer` should perform static analysis on the `.wasm` modules. Tools can inspect the module's import/export sections to ensure it only requests legitimate, expected host functions. It can also scan for known malicious code patterns.
-2.  **Resource Sandboxing for Compilation:** The `CompilationServer` already uses Docker, which is a good first step. This should be hardened by running each compilation job with the strictest possible constraints:
+1.  **Resource Sandboxing for Compilation:** The `CompilationServer` already uses Docker, which is a good first step. This should be hardened by running each compilation job with the strictest possible constraints:
     - A dedicated, non-root user.
     - A read-only filesystem, except for specific input/output directories.
     - Disabled network access for the compiler process itself.
-3.  **Compiler Version Management:** Ensure the `wamrc` compiler (and any other tool in the chain) is always kept up-to-date with the latest security patches. This falls under **OWASP Top 10 A06:2021 - Vulnerable and Outdated Components**.
+2.  **Compiler Version Management:** Ensure the `wamrc` compiler (and any other tool in the chain) is always kept up-to-date with the latest security patches. This falls under **OWASP Top 10 A06:2021 - Vulnerable and Outdated Components**.
+3.  **Static Analysis of WASM:** Before compilation, the `CompilationServer` performs static analysis on the `.wasm` modules. Tools can inspect the module's import/export sections to ensure it only requests legitimate, expected host functions. It can also scan for known malicious code patterns.
 
 ---
 
@@ -89,6 +90,3 @@ This is the most critical threat to the platform, as it directly affects the end
 1.  **Default Exception Handling:** Standard ASP.NET Core templates provide good defaults that prevent leaking stack traces in production environments. The `CompilerController` returns generic error messages for unexpected exceptions.
 2. **Secure Secret Management:** in production, all secrets are stored securely in the Azure Key Vault.
 3. **Prevent Directory Traversal in Compilation Job**: user provided strings are never used directly to build a file name or compiler options (see `CompilerOptionsBuilder`) or they're validated for correctness (see `FirmwareSourcePackage.IsSafeRelativePath`).
-
-#### Proposed Additional Mitigations:
-1.  **Review API Responses:** Systematically review all API responses to ensure they do not inadvertently contain internal IDs, file paths, or other sensitive data that is not strictly necessary for the client.

@@ -5,6 +5,7 @@ ENV TZ=Etc/UTC
 
 # Install essential build tools and various cross-compilation toolchains.
 # - `ca-certificates`, `wget`, `git`, `build-essential` (gcc, g++, make), `cmake`, `ninja-build`: Core development tools.
+# - `wabt`: WASM binary tools (WASM validation, etc).
 # - `python3`, `python3-requests`: Required in WAMRC build scripts.
 # - `lsb-release`, `software-properties-common`, `gnupg`: Required by the LLVM installation script.
 # - `curl`: Needed to download the Wasmer installation script.
@@ -39,6 +40,7 @@ RUN apt-get update && apt-get install -y \
     g++-arm-linux-gnueabi \
     gcc-riscv64-linux-gnu \
     g++-riscv64-linux-gnu \
+    wabt \
     --no-install-recommends \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
