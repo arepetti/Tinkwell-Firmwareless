@@ -53,7 +53,7 @@ key for hubs (with scope `firmware.download_all`) is created, you can distribute
 * The new vendor needs its own API key to manage its firmwares, create a new one and save it (temporarily) in an environment variable. You have to keep this API key safe. In a production environment you'd want to create a temporary one the vendor can use to bootstrap its own (the same way we did for our Admin API Key).
 
     ```bash
-    ./twless vendor create-key --vendor <vendor id>
+    ./twless vendor create-key --vendor <vendor id> --api-key <admin api key>
     export TW_REPOSITORY_API_KEY = "<new vendor api key>"
     ```
 
@@ -108,7 +108,7 @@ sequenceDiagram
 * The hub can download a firmware (the most appropriate version is returned automatically). Use `--type` if you need to download a device runtime or a service, and `--hardware` to specify the architecture for which you want to compile the firmware. Note that, to download a firmware, you can use your own vendor API key or (better) a low privileges API keys for hubs (like the one automatically generated when the system started the first time).
 
     ```bash
-    ./twless firmware download <vendor name> <product id>
+    ./twless firmware download <vendor id> <product id>
     ```
 
 ### Firmware Download Sequence

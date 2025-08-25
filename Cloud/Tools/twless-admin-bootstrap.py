@@ -43,7 +43,6 @@ def create_admin_key(host, api_key):
         ]
     }
 
-    print(f"Creating request for POST {path}...")
     conn.request("POST", path, body=json.dumps(payload), headers=headers)
     response = conn.getresponse()
     data = response.read()

@@ -36,8 +36,8 @@ public sealed class FirmwareSourcePackage
     private (CompilationManifest Manifest, Dictionary<string, string> Metadata) HandleZippedFirmware(CompilationRequest request, IDictionary<string, string> tags, string workingDirectory, string zipFilePath)
     {
         // First of all validate the package integrity and authenticity
-        if (tags.TryGetValue("certificate", out var publicKeyPem))
-            FirmwareSourcePackageValidator.Validate(zipFilePath, publicKeyPem);
+        if (!string.IsNullOrWhiteSpace(request.Certificate))
+            FirmwareSourcePackageValidator.Validate(zipFilePath, request.Certificate);
 
         // Then we can validate and extract the content
         using var archive = ZipFile.OpenRead(zipFilePath);
@@ -60,7 +60,7 @@ public sealed class FirmwareSourcePackage
 
         foreach (var compilationUnit in manifest.CompilationUnits)
         {
-            if (IsSafeRelativePath(compilationUnit) == false)
+            if (IsSafeEntryName(compilationUnit) == false)
                 throw new ArgumentException($"Invalid compilation unit path: {compilationUnit}. It must be a relative path.");
 
             string outputPath = Path.Combine(workingDirectory, compilationUnit);
@@ -80,7 +80,7 @@ public sealed class FirmwareSourcePackage
 
         foreach (var asset in manifest.Assets)
         {
-            if (IsSafeRelativePath(asset) == false)
+            if (IsSafeEntryName(asset) == false)
                 throw new ArgumentException($"Invalid asset path: {asset}. It must be a relative path.");
 
             string outputPath = Path.Combine(workingDirectory, asset);
@@ -122,11 +122,11 @@ public sealed class FirmwareSourcePackage
         }
     }
 
+    private static bool IsSafeEntryName(string path)
+        => !string.IsNullOrEmpty(path) && path.IndexOfAny(['"']) < 0 && IsSafeRelativePath(path);
+
     private static bool IsSafeRelativePath(string path)
     {
-        if (string.IsNullOrWhiteSpace(path))
-            return false;
-
         // Normalize separators to Linux-style
         var normalized = path.Replace('\\', '/');
 

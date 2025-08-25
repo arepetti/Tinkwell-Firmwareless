@@ -203,7 +203,7 @@ public sealed class FirmwaresService(ILogger<FirmwaresService> logger, AppDbCont
         await SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<string> GetBlobName(ClaimsPrincipal user, ResolveBlobNameRequest request, CancellationToken cancellationToken)
+    public async Task<(string Name, string Certificate)> GetBlobName(ClaimsPrincipal user, ResolveBlobNameRequest request, CancellationToken cancellationToken)
     {
         Debug.Assert(user is not null);
 
@@ -220,7 +220,7 @@ public sealed class FirmwaresService(ILogger<FirmwaresService> logger, AppDbCont
         if (firmware.Product.VendorId != request.VendorId)
             throw new NotFoundException($"No applicable firmware found for product {request.ProductId} and vendor {request.VendorId}.");
 
-        return GetBlobName(firmware);
+        return (GetBlobName(firmware), firmware.Product.Vendor.Certificate);
     }
 
     private readonly ILogger<FirmwaresService> _logger = logger;
@@ -287,7 +287,6 @@ public sealed class FirmwaresService(ILogger<FirmwaresService> logger, AppDbCont
             { "firmware_version", firmware.Version },
             { "firmware_type", firmware.Type.ToString().ToLowerInvariant() },
             { "firmware_status", firmware.Status.ToString().ToLowerInvariant() },
-            { "certificate", firmware.Product.Vendor.Certificate },
         };
 
         await blobClient.SetTagsAsync(tags, cancellationToken: cancellationToken);

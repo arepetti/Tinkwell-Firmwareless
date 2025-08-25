@@ -127,7 +127,7 @@ public sealed class Compiler
     {
         // When should we move to a template file instead of manually building the script here?
         _logger.LogInformation("Preparing the compilation script for {JobId}", request.JobId);
-        List<string> compilationScript = ["#!/bin/bash\r\n", "set -e"];
+        List<string> compilationScript = ["#!/bin/bash", "set -e"];
         foreach (var unit in request.Manifest.CompilationUnits)
         {
             compilationScript.Add($"while [ ! -f \"{ContainerWorkingDirectory}/{unit}\" ]; do sleep 1; done");

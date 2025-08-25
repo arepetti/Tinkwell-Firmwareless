@@ -38,9 +38,6 @@ var manifestsDb = pg.AddDatabase("tinkwell-firmwaredb-manifests");
 if (builder.Environment.IsDevelopment())
     pg = pg.WithBindMount(Path.Combine(dataRoot, "pgdata"), "/var/lib/postgresql/data");
 
-// Key Vault
-var keyVault = builder.AddAzureKeyVault("tinkwell-keyvault");
-
 // Compilation service
 var wamrcCompiler = builder.AddDockerfile("wamrc-compiler", "../Tinkwell.Firmwareless.WamrcCompiler");
 
@@ -48,7 +45,6 @@ var compilationServer = builder
     .AddProject<Projects.Tinkwell_Firmwareless_CompilationServer>("tinkwell-compilation-server")
     .WithReference(assets)
     .WithReference(builds)
-    .WithReference(keyVault)
     .WithHttpsEndpoint();
 
 if (wamrcCompiler.Resource.TryGetContainerImageName(out var compilerImageName))
@@ -62,8 +58,15 @@ var publicRepository = builder
     .WithReference(assets)
     .WithReference(manifestsDb)
     .WithReference(compilationServer)
-    .WithReference(keyVault)
     .WithExternalHttpEndpoints();
+
+// Key Vault
+if (builder.Environment.IsDevelopment() == false)
+{
+    var keyVault = builder.AddAzureKeyVault("tinkwell-keyvault");
+    compilationServer.WithReference(keyVault);
+    publicRepository.WithReference(keyVault);
+}
 
 // Done, run it!
 builder.Build().Run();

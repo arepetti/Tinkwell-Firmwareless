@@ -122,13 +122,14 @@ public sealed class FirmwaresController(ILogger<FirmwaresController> logger, Fir
         {
             _logger.LogInformation("Download request for firmware: VendorId={VendorId}, ProductId={ProductId}, Type={Type}, HardwareVersion={HardwareVersion}, HardwareArchitecture={HardwareArchitecture}",
                 request.VendorId, request.ProductId, request.Type, request.HardwareVersion, request.HardwareArchitecture);
-            var blobName = await _service.GetBlobName(
+            
+            var (blobName, certificate) = await _service.GetBlobName(
                 HttpContext.User,
                 new FirmwaresService.ResolveBlobNameRequest(request.VendorId, request.ProductId, request.Type, request.HardwareVersion),
                 ct);
 
             _logger.LogInformation("Compiling {Name} for HardwareArchitecture={HardwareArchitecture}", blobName, request.HardwareArchitecture);
-            var compilationRequest = new CompilationRequest(blobName, request.HardwareArchitecture);
+            var compilationRequest = new CompilationRequest(blobName, request.HardwareArchitecture, certificate);
             var stream = await _compilationProxy.CompileAsync(compilationRequest, ct);
 
             Response.Headers.CacheControl = "no-store";

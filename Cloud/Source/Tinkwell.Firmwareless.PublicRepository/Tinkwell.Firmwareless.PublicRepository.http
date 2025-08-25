@@ -1,10 +1,10 @@
 @Tinkwell.Firmwareless.PublicRepository_HostAddress = http://localhost:5165
-@AdminApiKey = ak_JM1BIDfEhkO6iz4Jmadpb0PnOi0S-ySH
+@AdminApiKey = ak_kGcswOK1BE6J9U3Ya-DVB5lyqJ7-OFhv
 @HubApiKey = ak_FIDPQwZbHEWLH1G6UQGyMir7BKV33-YY
 
-@VendorId = d68a3212-8ffd-4fa9-a296-5177b6505993
-@UserApiKey = ak_hUrJKX5TVUGoREgGpQw1M-TiSguFrLq6
-@ProductId = 890fd633-c5b7-4ea9-bd44-d797f24c6f89
+@VendorId = def663bd-779c-4d86-a673-545838cf6173
+@UserApiKey = ak_oOCDA0Uye0CekRtYb_V-eJRXdBxTSGob
+@ProductId = aed5836b-d6ec-41b2-8b0b-8e17b3125305
 
 ### Step 0: check connectivity
 GET {{Tinkwell.Firmwareless.PublicRepository_HostAddress}}/status
