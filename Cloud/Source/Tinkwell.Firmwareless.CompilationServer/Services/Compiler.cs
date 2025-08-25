@@ -1,4 +1,4 @@
-using Docker.DotNet;
+﻿using Docker.DotNet;
 using Docker.DotNet.Models;
 using System.Text.Json;
 
@@ -8,7 +8,7 @@ public sealed class Compiler
 {
     public sealed record Request(string JobId, string WorkingDirectory, string Target)
     {
-        public required CompilationManifest Manifest {  get; set; }
+        public required CompilationManifest Manifest { get; set; }
         public Dictionary<string, string> Metadata { get; set; } = new();
         public required Func<string, string> GetOutputFileName { get; set; }
         public string? StackUsageFile { get; set; }
@@ -48,39 +48,17 @@ public sealed class Compiler
     }
 
     sealed record ContainerLimits(long Memory, long MemorySwap, long NanoCPUs, int Pids, int Files);
-    
+
     private const string ContainerWamrcPath = "/usr/local/wamr/bin/wamrc";
     private const string ContainerWorkingDirectory = "/app";
     private const string CompilationScriptName = "compile.sh";
 
     private static System.Text.UTF8Encoding TextEncoding = new System.Text.UTF8Encoding(false);
-    
+
     private readonly IDockerClient _dockerClient;
     private readonly ILogger<Compiler> _logger;
     private readonly string _compilerImageName;
     private readonly ContainerLimits _containerLimits;
-
-    private async Task CreateCompilationScript(Request request, CancellationToken cancellationToken)
-    {
-        // When should we move to a template file instead of manually building the script here?
-        _logger.LogInformation("Preparing the compilation script for {JobId}", request.JobId);
-        List<string> compilationScript = ["#!/bin/bash\r\n", "set -e"];
-        foreach (var unit in request.Manifest.CompilationUnits)
-        {
-            compilationScript.Add($"while [ ! -f \"{ContainerWorkingDirectory}/{unit}\" ]; do sleep 1; done");
-            compilationScript.Add($"wasm-validate --enable-all \"{ContainerWorkingDirectory}/{unit}\"");
-            var args = GetCompilerArgs(request, unit, request.GetOutputFileName(unit));
-            string[] command = [ContainerWamrcPath, .. args];
-            compilationScript.Add(string.Join(' ', command));
-            _logger.LogInformation("Command {Command}", string.Join(' ', command));
-        }
-
-        await File.WriteAllTextAsync(
-            Path.Combine(request.WorkingDirectory, CompilationScriptName),
-            string.Join('\n', compilationScript),
-            TextEncoding,
-            cancellationToken);
-    }
 
     private static string[] GetCompilerArgs(Request request, string input, string output)
     {
@@ -110,35 +88,9 @@ public sealed class Compiler
         if (!images.Any(x => x.RepoTags.Contains(_compilerImageName)))
             throw new InvalidOperationException($"Image {_compilerImageName} not found locally");
 
-        // Run the compiler. We're using a compilation script not only to support multiple compilation units
-        // but also because, when running on Windows in local development, the host directory won't be visible.
-        // It's not even about a short delay (it doesn't change anything), probably a race condition in the docker
-        // client library or the Docker service itself. Executing a script (or even the compiler itself) through bash
-        // seems to work around this issue.
-        // We set limits for the container to prevent it from consuming too many resources (faulty tools, code or DoS attacks).
-        string compilationScriptPathInContainer = $"{ContainerWorkingDirectory}/{CompilationScriptName}";
-        var container = await _dockerClient.Containers.CreateContainerAsync(new CreateContainerParameters
-        {
-            Image = _compilerImageName,
-            Cmd = ["bash", "-c", $"chmod +x {compilationScriptPathInContainer} && {compilationScriptPathInContainer}"],
-            WorkingDir = ContainerWorkingDirectory,
-            HostConfig = new HostConfig
-            {
-                Binds = [$"{hostPath}:{ContainerWorkingDirectory}"],
-                Memory = _containerLimits.Memory,
-                MemorySwap = _containerLimits.MemorySwap,
-                NanoCPUs = _containerLimits.NanoCPUs,
-                PidsLimit = _containerLimits.Pids,
-                Ulimits =
-                [
-                    new() { Name = "nofile", Soft = _containerLimits.Files, Hard = _containerLimits.Files }
-                ]
-            },
+        CreateContainerResponse container = await CreateSecuredWamrcContainer(hostPath, cancellationToken);
 
-        }, cancellationToken);
-
-
-    await _dockerClient.Containers.StartContainerAsync(container.ID, null, cancellationToken);
+        await _dockerClient.Containers.StartContainerAsync(container.ID, null, cancellationToken);
         var waitResponse = await _dockerClient.Containers.WaitContainerAsync(container.ID, cancellationToken);
 
         if (waitResponse.StatusCode != 0)
@@ -169,5 +121,73 @@ public sealed class Compiler
             cancellationToken);
 
         return (waitResponse.StatusCode == 0, stdout.ConvertToString(), stderr.ConvertToString());
+    }
+
+    private async Task CreateCompilationScript(Request request, CancellationToken cancellationToken)
+    {
+        // When should we move to a template file instead of manually building the script here?
+        _logger.LogInformation("Preparing the compilation script for {JobId}", request.JobId);
+        List<string> compilationScript = ["#!/bin/bash\r\n", "set -e"];
+        foreach (var unit in request.Manifest.CompilationUnits)
+        {
+            compilationScript.Add($"while [ ! -f \"{ContainerWorkingDirectory}/{unit}\" ]; do sleep 1; done");
+            compilationScript.Add($"wasm-validate --enable-all \"{ContainerWorkingDirectory}/{unit}\"");
+            var args = GetCompilerArgs(request, unit, request.GetOutputFileName(unit));
+            string[] command = [ContainerWamrcPath, .. args];
+            compilationScript.Add(string.Join(' ', command));
+            _logger.LogInformation("Command {Command}", string.Join(' ', command));
+        }
+
+        await File.WriteAllTextAsync(
+            Path.Combine(request.WorkingDirectory, CompilationScriptName),
+            string.Join('\n', compilationScript),
+            TextEncoding,
+            cancellationToken);
+    }
+
+    private async Task<CreateContainerResponse> CreateSecuredWamrcContainer(string hostPath, CancellationToken cancellationToken)
+    {
+        string compilationScriptPathInContainer = $"{ContainerWorkingDirectory}/{CompilationScriptName}";
+        var container = await _dockerClient.Containers.CreateContainerAsync(
+            new CreateContainerParameters
+            {
+                Image = _compilerImageName,
+                Cmd =
+                [
+                    "bash", "-c", $"chmod +x {compilationScriptPathInContainer} && {compilationScriptPathInContainer}"
+                ],
+                WorkingDir = ContainerWorkingDirectory,
+                HostConfig = new HostConfig
+                {
+                    // Bind mount for /app (writable)
+                    Binds =
+                    [
+                        $"{hostPath}:{ContainerWorkingDirectory}"
+                    ],
+
+                    // Everything else is read-only
+                    ReadonlyRootfs = true,
+
+                    // Writable tmpfs mounts
+                    Tmpfs = new Dictionary<string, string>
+                    {
+                        { "/tmp", "" },
+                        { "/var/tmp", "" },
+                        { "/var/cache", "" }
+                    },
+
+                    Memory = _containerLimits.Memory,
+                    MemorySwap = _containerLimits.MemorySwap,
+                    NanoCPUs = _containerLimits.NanoCPUs,
+                    PidsLimit = _containerLimits.Pids,
+                    Ulimits =
+                    [
+                        new() { Name = "nofile", Soft = _containerLimits.Files, Hard = _containerLimits.Files }
+                    ]
+                }
+            },
+            cancellationToken
+        );
+        return container;
     }
 }
