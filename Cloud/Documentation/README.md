@@ -11,9 +11,13 @@
       style Repository fill:#ff9999,stroke:#333,stroke-width:2px
 ```
 
-## Bootstrapping
+## See Also
 
-See also [endpoints and permissions](Endpoints.md).
+* [Endpoints and Permissions](Endpoints.md).
+* [Compilation Process](./Compilation.md).
+* [Threat Modeling](Threat_Modeling.md).
+
+## Bootstrapping
 
 When testing locally you do not need to repeat the bootstrapping workflow each time, settings are persisted in `Cloud/Source/Tinkwell.Firmless.Cloud/.containers`, delete the whole directory if you want to reset and start from scratch.
 
@@ -99,7 +103,7 @@ sequenceDiagram
 ```
 
 
-## Downloading a firmware
+## Downloading a Firmware
 
 * The hub can download a firmware (the most appropriate version is returned automatically). Use `--type` if you need to download a device runtime or a service, and `--hardware` to specify the architecture for which you want to compile the firmware. Note that, to download a firmware, you can use your own vendor API key or (better) a low privileges API keys for hubs (like the one automatically generated when the system started the first time).
 
@@ -117,6 +121,7 @@ sequenceDiagram
     participant Compilation Server
     participant Storage
     participant Compiler
+    participant Key Vault
 
     Hub->>Public Repository: POST /firmwares/download (productId, architecture)
     Public Repository->>Database: Find firmware for productId
@@ -124,14 +129,19 @@ sequenceDiagram
     Public Repository->>Compilation Server: Compile firmware(firmwareId, architecture)
     Compilation Server->>Storage: Download WASM file
     Storage-->>Compilation Server: WASM file
+    Compilation Server->>Compilation Server: Validate package integrity
+    Compilation Server->>Compilation Server: Validate package content
     Compilation Server->>Compilation Server: Calculate options
     Compilation Server->>Compiler: Compilation script
     Compiler-->>Compilation Server: Compiled firmware
-    Compilation Server->>Compilation Server: Creates manifest
+    Compilation Server->>Compilation Server: Create manifest
     Compilation Server->>Compilation Server: Package firmware
+    Compilation Server->>Compilation Server: Calculate file hashes (Integrity manifest)
+    Compilation Server->>Key Vault: Integrity manifest 
+    Key Vault-->>Compilation Server: Signature 
     Compilation Server-->>Public Repository: Packaged firmware
     Public Repository-->>Hub: Compiled firmware package
+    Hub->>Hub: Validate package signature
     Hub->>Hub: Install firmware
 ```
 
-If you are interested in the compilation options then read [Compilation.md](./Compilation.md).

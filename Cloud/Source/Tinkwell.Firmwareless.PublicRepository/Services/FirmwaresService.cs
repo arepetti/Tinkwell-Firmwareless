@@ -84,7 +84,7 @@ public sealed class FirmwaresService(ILogger<FirmwaresService> logger, AppDbCont
         using var stream = request.File.OpenReadStream();
         await tempFile.WriteFromStream(stream, cancellationToken);
 
-        FirmwarePackageValidator.Validate(tempFile.Path, product.Vendor.Certificate);
+        FirmwareSourcePackageValidator.Validate(tempFile.Path, product.Vendor.Certificate);
 
         // All good, create the firmware record and upload the file to blob storage
         var entity = new Firmware

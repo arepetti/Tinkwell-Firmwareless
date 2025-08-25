@@ -4,7 +4,7 @@ namespace Tinkwell.Firmwareless.CompilationServer.Services;
 
 public sealed class CompilationService : ICompilationService
 {
-    public CompilationService(ILogger<CompilationService> logger, FirmwareSourceArchive sourceArchive, CompiledFirmwareArchive targetArchive, Compiler compiler)
+    public CompilationService(ILogger<CompilationService> logger, FirmwareSourcePackage sourceArchive, CompiledFirmwarePackage targetArchive, Compiler compiler)
     {
         _compiler = compiler;
         _logger = logger;
@@ -20,7 +20,6 @@ public sealed class CompilationService : ICompilationService
         try
         {
             var (manifest, metadata) = await _sourceArchive.DownloadAsync(job, cancellationToken);
-            job.Manifest = manifest;
             cancellationToken.ThrowIfCancellationRequested();
 
             var parameters = new Compiler.Request(job.Id, job.WorkingDirectoryPath, request.Architecture)
@@ -42,8 +41,8 @@ public sealed class CompilationService : ICompilationService
 
     private readonly Compiler _compiler;
     private readonly ILogger<CompilationService> _logger;
-    private readonly FirmwareSourceArchive _sourceArchive;
-    private readonly CompiledFirmwareArchive _targetArchive;
+    private readonly FirmwareSourcePackage _sourceArchive;
+    private readonly CompiledFirmwarePackage _targetArchive;
 
     private static string GetOutputFileName(string inputFileName)
         => Path.ChangeExtension(Path.GetFileName(inputFileName), ".aot");

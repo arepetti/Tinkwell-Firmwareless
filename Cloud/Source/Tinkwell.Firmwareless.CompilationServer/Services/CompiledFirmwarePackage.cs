@@ -6,9 +6,9 @@ using System.Text;
 
 namespace Tinkwell.Firmwareless.CompilationServer.Services;
 
-public sealed class CompiledFirmwareArchive : IDisposable
+public sealed class CompiledFirmwarePackage : IDisposable
 {
-    public CompiledFirmwareArchive(ILogger<CompiledFirmwareArchive> logger, IKeyVaultSignatureService signatureService)
+    public CompiledFirmwarePackage(ILogger<CompiledFirmwarePackage> logger, IKeyVaultSignatureService signatureService)
     {
         _sha = SHA512.Create();
         _stream = new MemoryStream();
@@ -71,7 +71,7 @@ public sealed class CompiledFirmwareArchive : IDisposable
     private readonly Stream _stream;
     private readonly ZipArchive _archive;
     private readonly IKeyVaultSignatureService _signatureService;
-    private readonly ILogger<CompiledFirmwareArchive> _logger;
+    private readonly ILogger<CompiledFirmwarePackage> _logger;
     private bool _frozen;
 
     private async Task AddFileAsync(string filePath, string entryName, CancellationToken cancellationToken)

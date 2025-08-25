@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 
 namespace Tinkwell.Firmwareless;
 
-public static class FirmwarePackageValidator
+public static class FirmwareSourcePackageValidator
 {
     public static void Validate(string zipPath, string publicKeyPem)
     {
@@ -119,9 +119,5 @@ public static class FirmwarePackageValidator
     }
 
     private static string ComputeSha512Hex(Stream stream)
-    {
-        using var sha = SHA512.Create();
-        byte[] hash = sha.ComputeHash(stream);
-        return Convert.ToHexStringLower(hash);
-    }
+        => Convert.ToHexStringLower(SHA512.HashData(stream));
 }

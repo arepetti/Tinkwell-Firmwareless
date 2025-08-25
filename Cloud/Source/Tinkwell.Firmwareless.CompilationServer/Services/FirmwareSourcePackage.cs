@@ -5,9 +5,9 @@ using Tinkwell.Firmwareless.Controllers;
 
 namespace Tinkwell.Firmwareless.CompilationServer.Services;
 
-public sealed class FirmwareSourceArchive
+public sealed class FirmwareSourcePackage
 {
-    public FirmwareSourceArchive(ILogger<FirmwareSourceArchive> logger, IBlobContainerClientFactory blobFactory)
+    public FirmwareSourcePackage(ILogger<FirmwareSourcePackage> logger, IBlobContainerClientFactory blobFactory)
     {
         _logger = logger;
         _sourceArtifacts = blobFactory.GetBlobContainerClient("tinkwell-firmwarestore-assets");
@@ -25,17 +25,19 @@ public sealed class FirmwareSourceArchive
         if (FileTypeDetector.Detect(downloadedFirmwarePath) != FileTypeDetector.FileType.Zip)
             throw new ArgumentException("Unsupported file type for compilation.");
 
-        return HandleZippedFirmware(job.Request, tags.Value.Tags, job.WorkingDirectoryPath, downloadedFirmwarePath);
+        var result = HandleZippedFirmware(job.Request, tags.Value.Tags, job.WorkingDirectoryPath, downloadedFirmwarePath);
+        job.Manifest = result.Manifest;
+        return result;
     }
 
-    private readonly ILogger<FirmwareSourceArchive> _logger;
+    private readonly ILogger<FirmwareSourcePackage> _logger;
     private readonly BlobContainerClient _sourceArtifacts;
 
     private (CompilationManifest Manifest, Dictionary<string, string> Metadata) HandleZippedFirmware(CompilationRequest request, IDictionary<string, string> tags, string workingDirectory, string zipFilePath)
     {
         // First of all validate the package integrity and authenticity
         if (tags.TryGetValue("certificate", out var publicKeyPem))
-            FirmwarePackageValidator.Validate(zipFilePath, publicKeyPem);
+            FirmwareSourcePackageValidator.Validate(zipFilePath, publicKeyPem);
 
         // Then we can validate and extract the content
         using var archive = ZipFile.OpenRead(zipFilePath);
@@ -72,6 +74,8 @@ public sealed class FirmwareSourceArchive
                 throw new ArgumentException($"Compilation unit {compilationUnit} is too big: {entry.Length} bytes.");
 
             entry.ExtractToFile(outputPath, overwrite: true);
+            if (FileTypeDetector.Detect(outputPath) != FileTypeDetector.FileType.Wasm)
+                throw new ArgumentException($"Compilation unit {compilationUnit} is not a valid WebAssembly module.");
         }
 
         foreach (var asset in manifest.Assets)

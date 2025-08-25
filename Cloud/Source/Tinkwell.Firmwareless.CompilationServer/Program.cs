@@ -44,7 +44,7 @@ builder.Services.AddSingleton<IDockerClient>(serviceProvider =>
 
 builder.Services.AddScoped<Compiler>();
 builder.Services.AddScoped<ICompilationService, CompilationService>();
-builder.Services.AddScoped<CompiledFirmwareArchive>();
+builder.Services.AddScoped<CompiledFirmwarePackage>();
 
 builder.Services
     .AddControllers()
