@@ -157,6 +157,7 @@ public sealed class Compiler
                     "bash", "-c", $"chmod +x {compilationScriptPathInContainer} && {compilationScriptPathInContainer}"
                 ],
                 WorkingDir = ContainerWorkingDirectory,
+                NetworkDisabled = true,
                 HostConfig = new HostConfig
                 {
                     // Bind mount for /app (writable)

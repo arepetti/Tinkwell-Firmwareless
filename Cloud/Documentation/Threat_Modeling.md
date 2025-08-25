@@ -19,12 +19,13 @@ This is the most critical threat to the platform, as it directly affects the end
 1.  **Vendor Authentication:** The `PublicRepository` requires an `X-Api-Key` for all upload operations, preventing anonymous uploads. (Ref: `ApiKeyAuthHandler.cs`)
 2.  **Package Integrity Verification:** The `FirmwareSourcePackageValidator.cs` implements a robust check. It requires that the uploaded ZIP contains a manifest of file hashes and that this manifest is signed with the vendor's private key. The server verifies this using the vendor's public key. This is an excellent mitigation against tampering in transit and ensures the vendor's identity.
 3.  **WASM validation:** `CompilationServer` generates a compilation script; the first step, before invoking `wamrc`, is the validation on the `.wasm` modules using `wasm-validate`.
+4.  **Resource Sandboxing for Compilation:** The `CompilationServer` runs  each compilation job with these constraints:
+    - A read-only filesystem, except for specific input/output directories (temp files and exchange `/app` directory).
+    - Network access is disabled for the container.
 
 #### Additional Mitigations:
 1.  **Resource Sandboxing for Compilation:** The `CompilationServer` already uses Docker, which is a good first step. This should be hardened by running each compilation job with the strictest possible constraints:
     - A dedicated, non-root user.
-    - A read-only filesystem, except for specific input/output directories.
-    - Disabled network access for the compiler process itself.
 2.  **Compiler Version Management:** Ensure the `wamrc` compiler (and any other tool in the chain) is always kept up-to-date with the latest security patches. This falls under **OWASP Top 10 A06:2021 - Vulnerable and Outdated Components**.
 3.  **Static Analysis of WASM:** Before compilation, the `CompilationServer` performs static analysis on the `.wasm` modules. Tools can inspect the module's import/export sections to ensure it only requests legitimate, expected host functions. It can also scan for known malicious code patterns.
 
