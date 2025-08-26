@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
+using Tinkwell.Firmwareless.Cloud.Security;
 
 namespace Tinkwell.Firmwareless.CompilationServer.Services;
 

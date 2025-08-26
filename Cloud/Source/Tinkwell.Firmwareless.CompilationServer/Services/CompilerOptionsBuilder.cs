@@ -1,5 +1,3 @@
-using Tinkwell.Firmwareless;
-
 namespace Tinkwell.Firmwareless.CompilationServer.Services;
 
 sealed class CompilerOptionsBuilderOptions

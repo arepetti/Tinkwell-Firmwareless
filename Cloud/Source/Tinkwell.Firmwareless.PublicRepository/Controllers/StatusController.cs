@@ -3,7 +3,7 @@
 namespace Tinkwell.Firmwareless.PublicRepository.Controllers;
 
 [ApiController]
-[Route("status")]
+[Route("/api/v1/status")]
 public class StatusController : ControllerBase
 {
     [HttpGet]

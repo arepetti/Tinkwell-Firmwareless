@@ -3,6 +3,7 @@ using Azure.Security.KeyVault.Keys.Cryptography;
 using Docker.DotNet;
 using System.Runtime.InteropServices;
 using Tinkwell.Firmwareless;
+using Tinkwell.Firmwareless.Cloud.Security;
 using Tinkwell.Firmwareless.CompilationServer.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,9 +25,7 @@ if (builder.Environment.IsProduction())
     var keyVaultUri = builder.Configuration["AzureKeyVaults:keyvault:VaultUri"]!;
     var keyId = new Uri(new Uri(keyVaultUri), $"/keys/{keyName}");
    
-    // Register the CryptographyClient as before, but now it's powered by Aspire's configuration
-   builder.Services.AddSingleton(sp =>
-    new CryptographyClient(keyId, new DefaultAzureCredential()));
+   builder.Services.AddSingleton(sp => new CryptographyClient(keyId, new DefaultAzureCredential()));
    builder.Services.AddScoped<IKeyVaultSignatureService, KeyVaultSignatureService>();
 }
 else

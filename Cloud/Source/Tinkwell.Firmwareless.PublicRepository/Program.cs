@@ -1,7 +1,9 @@
 using Azure.Identity;
+using Azure.Security.KeyVault.Keys.Cryptography;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Tinkwell.Firmwareless;
+using Tinkwell.Firmwareless.Cloud.Security;
 using Tinkwell.Firmwareless.PublicRepository.Authentication;
 using Tinkwell.Firmwareless.PublicRepository.Configuration;
 using Tinkwell.Firmwareless.PublicRepository.Database;
@@ -12,12 +14,22 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddDefaultLogging();
 builder.AddInvalidModelStateLogging();
 
-// Azure Key Vault is configured only for production, when developing locally we use environment variables
+// Azure Key Vault is configured only for production
 if (builder.Environment.IsProduction())
 {
-    var vaultUri = builder.Configuration["KeyVault:VaultUri"];
-    if (!string.IsNullOrWhiteSpace(vaultUri))
-        builder.Configuration.AddAzureKeyVault(new Uri(vaultUri), new DefaultAzureCredential());
+    var keyName = builder.Configuration["KeyVault:SigningKeyName"];
+    if (string.IsNullOrEmpty(keyName))
+        throw new InvalidOperationException("The 'KeyVault:SigningKeyName' must be configured with the name of the KeyVault key.");
+
+    var keyVaultUri = builder.Configuration["AzureKeyVaults:keyvault:VaultUri"]!;
+    var keyId = new Uri(new Uri(keyVaultUri), $"/keys/{keyName}");
+
+    builder.Services.AddSingleton(sp => new CryptographyClient(keyId, new DefaultAzureCredential()));
+    builder.Services.AddScoped<IKeyVaultSignatureService, KeyVaultSignatureService>();
+}
+else
+{
+    builder.Services.AddScoped<IKeyVaultSignatureService, LocalDevelopmentSignatureService>();
 }
 
 // Features
