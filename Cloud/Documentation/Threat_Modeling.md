@@ -2,11 +2,50 @@
 
 This document provides a threat modeling analysis for the Tinkwell Firmwareless cloud components, specifically the `PublicRepository` and the `CompilationServer`. The goal is to identify potential security risks, assess their impact, and propose concrete mitigation strategies.
 
----
+```mermaid
+graph LR
+    subgraph "External Actors"
+        direction LR
+        Vendor([Vendor])
+        Attacker(Threat Actor)
+        Hub(End-User Hub)
+    end
+
+    subgraph "Cloud Infrastructure"
+        direction LR
+        Repo[Public Repository API]
+        CompilationServer[Compilation Server]
+        Compiler[Compiler]
+    end
+
+    %% Data Flow
+    Vendor      -- "Uploads Signed Firmware (.zip)"   --> Repo;
+    Repo        -- "Validates & Forwards .wasm"       --> CompilationServer;
+    CompilationServer    -- "Compiles in Sandbox"     --> Compiler;
+    Compiler    -- "Returns Compiled Artifact" --> CompilationServer;
+    CompilationServer    -- "Returns Compiled Artifact" --> Repo;
+    Repo        -- "Stores & Serves Artifact"         --> Hub;
+
+    %% Threats
+    Attacker -- "T1: Malicious Firmware Upload" --> Compiler;
+    Attacker -- "T1: Malicious Firmware Upload" --> CompilationServer;
+    Attacker -- "T2: Denial of Service" --> Repo;
+    Attacker -- "T2: Denial of Service" --> CompilationServer;
+    Attacker -- "T2: Denial of Service" --> Compiler;
+    Attacker -- "T3: Authentication Flaws" --> Repo;
+    Attacker -- "T4: Information Disclosure" --> Repo;
+    Attacker -- "T4: Information Disclosure" --> Compiler;
+    Vendor -- "T4: Information Disclosure" --> Hub;
+    linkStyle 6,7,8,9,10,11,12,13,14 stroke:#cc0000,stroke-dasharray: 5 3;
+    classDef threat fill:#ffcccc,stroke:#cc0000,stroke-width:2px;
+    class Attacker threat;
+```
 
 ## 1. Malicious Firmware Upload & Execution
 
 This is the most critical threat to the platform, as it directly affects the end-user devices (hubs) that will run the firmware.
+
+### 1.1 External Attacker
 
 - **Threat Description:** An attacker, either by posing as a legitimate vendor or by compromising a vendor's account, uploads a crafted WebAssembly (`.wasm`) file. This file is not a benign firmware but a malicious payload designed to exploit vulnerabilities in either the AOT compiler on the `CompilationServer` or the WASM runtime on the end-user's hub.
 - **STRIDE Category:** Tampering, Elevation of Privilege.
@@ -28,6 +67,24 @@ This is the most critical threat to the platform, as it directly affects the end
     - A dedicated, non-root user.
 2.  **Compiler Version Management:** Ensure the `wamrc` compiler (and any other tool in the chain) is always kept up-to-date with the latest security patches. This falls under **OWASP Top 10 A06:2021 - Vulnerable and Outdated Components**.
 3.  **Static Analysis of WASM:** Before compilation, the `CompilationServer` performs static analysis on the `.wasm` modules. Tools can inspect the module's import/export sections to ensure it only requests legitimate, expected host functions. It can also scan for known malicious code patterns.
+
+### 1.2 Malicious Vendor
+
+- **Threat Description:** A malicious vendor could deploy a firmware designed to collct user data or to execute malicious code.
+- **STRIDE Category:** Repudiation.
+- **Impact:** High. A successful exploit can run malicious code on the entire fleet of hubs that download the compromised firmware. This could result in a massive botnet, data theft from end-users, or physical disruption of IoT devices.
+- **Exploit Difficulty:** Low. Requires publishing malicious code.
+- **Reward for Attacker:** High. Control over a large number of IoT devices is a significant asset.
+- **Likelihood:** Medium. The high reward makes this an attractive target for attackers but it's very easy to find who did what.
+
+#### Current Mitigations:
+1.  **Vendor Authentication:** The `PublicRepository` requires an `X-Api-Key` for all upload operations, preventing anonymous uploads. (Ref: `ApiKeyAuthHandler.cs`).
+2. **Firmware signing:** firmware are signed by the vendor using its private key.
+
+#### Additional Mitigations:
+- **Input Validation:** Before sending a file to the compiler, perform more checks than just the file type. Analyze the WASM module's structure (number of functions, complexity) to reject files that are clearly designed to be "compiler bombs".
+
+The cloud services prevent Repudiation, mitigations are implemented in the Hub.
 
 ---
 

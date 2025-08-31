@@ -45,6 +45,7 @@ def main():
     args = parser.parse_args()
 
     config = {
+        "FirmwarelessVersion": "^1.0",
         "EnableMultiThread": args.enable_multi_thread,
         "EnableTailCall": args.enable_tail_call,
         "EnableGarbageCollection": args.enable_gc,

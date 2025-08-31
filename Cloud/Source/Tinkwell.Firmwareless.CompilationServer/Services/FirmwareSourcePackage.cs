@@ -107,6 +107,11 @@ public sealed class FirmwareSourcePackage
         if (manifest.Assets.Count > 0)
             permissions.Add("io.read_assets");
 
+        if (!string.IsNullOrWhiteSpace(manifest.FirmwarelessVersion))
+            tags.Add("firmwareless_version", manifest.FirmwarelessVersion);
+        else
+            tags.Add("firmwareless_version", "^1.0");
+
         return (manifest, CreateMetadata(request, tags, permissions));
 
         CompilationManifest ExtractOrCreateManifest()

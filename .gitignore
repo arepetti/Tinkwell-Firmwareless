@@ -28,7 +28,6 @@ artifacts/
 ScaffoldingReadMe.txt
 
 # NuGet
-packages/
 *.nupkg
 *.snupkg
 
@@ -55,6 +54,10 @@ sdkconfig.old
 *.elf
 *.bin
 *.map
+
+# ---- AssemblyScript/Node ----
+node_modules/
+build/
 
 # ---- OS/editor ----
 .DS_Store.idea/

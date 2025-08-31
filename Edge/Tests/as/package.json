@@ -1,0 +1,25 @@
+{
+  "name": "hello-tinkwell",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "node tests",
+    "asbuild:debug": "asc assembly/index.ts --target debug --noAssert",
+    "asbuild:release": "asc assembly/index.ts --target release --noAssert",
+    "asbuild": "npm run asbuild:debug && npm run asbuild:release",
+    "start": "npx serve ."
+  },
+  "author": "Adriano Repetti",
+  "license": "MIT",
+  "description": "",
+  "devDependencies": {
+    "assemblyscript": "^0.28.5"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./build/release.js",
+      "types": "./build/release.d.ts"
+    }
+  }
+}

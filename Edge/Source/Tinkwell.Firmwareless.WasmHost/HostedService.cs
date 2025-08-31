@@ -1,0 +1,72 @@
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using System.Diagnostics;
+using System.IO.Compression;
+using System.Security.Cryptography;
+using System.Text;
+using Tinkwell.Firmwareless.WasmHost.Packages;
+
+sealed class HostedService(ILogger<HostedService> logger, IPackageDiscovery discovery) : IHostedService
+{
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        var firmletsPaths = await _discovery.DiscoverAsync(AppContext.BaseDirectory, cancellationToken);
+        foreach (var firmletPath in firmletsPaths)
+        {
+            _logger.LogDebug("Discovered valid firmlet: {Path}", Path.GetFileName(firmletPath));
+            var firmletEntry = UnpackFirmwarePackage(firmletPath);
+            if (firmletEntry is not null)
+                _firmlets.Add(firmletEntry);
+        }
+        stopwatch.Stop();
+        _logger.LogInformation("Discovered and unpacked {Count} firmlets in {ElapsedMilliseconds} ms", _firmlets.Count, stopwatch.ElapsedMilliseconds);
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    private sealed record FirmwareEntry(string Path, PackageManifest Manifest);
+
+    private readonly ILogger<HostedService> _logger = logger;
+    private readonly IPackageDiscovery _discovery = discovery;
+    private readonly List<FirmwareEntry> _firmlets = new();
+
+    private FirmwareEntry? UnpackFirmwarePackage(string path)
+    {
+        var cachePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Tinkwell.Firmwareless.Hub", "FirmwareCache");
+        try
+        {
+            var manifest = PackageManifestReader.Read(path);
+            if (!Directory.Exists(cachePath))
+                Directory.CreateDirectory(cachePath);
+            
+            var firmwareDirectoryName = Path.Combine(
+                cachePath,
+                ShortenGuid(manifest.VendorId, 12),
+                ShortenGuid(manifest.ProductId, 8),
+                manifest.FirmwareVersion);
+
+            if (Directory.Exists(firmwareDirectoryName))
+                return new(firmwareDirectoryName, manifest);
+
+            _logger.LogInformation("Unpacking {Name} to {Path}", Path.GetFileName(path), firmwareDirectoryName);
+            ZipFile.ExtractToDirectory(path, firmwareDirectoryName);
+            return new(firmwareDirectoryName, manifest);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Cannot unpack firmware {Name} to {Path}", Path.GetFileName(path), cachePath);
+        }
+
+        return null;
+
+        static string ShortenGuid(string id, int length)
+        {
+            var hash = SHA256.HashData(Encoding.UTF8.GetBytes(id));
+            return Convert.ToHexStringLower(hash)[..length];
+        }
+    }
+}
