@@ -11,3 +11,4 @@ Reference implementation for Tinkwell Firmwareless IoT:
 ## Documentation
 
 * [Public repository](./Cloud/README.md).
+* [Firmwareless host](./Edge/README.md).
