@@ -1,14 +1,29 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System.CommandLine;
 using System.CommandLine.Parsing;
+using System.Diagnostics;
 using Tinkwell.Firmwareless.WamrAotHost.Hosting;
 
+var stopwatch = new Stopwatch();
+stopwatch.Start();
+
 using var host = Host.CreateDefaultBuilder([])
+    .ConfigureLogging(builder =>
+    {
+        builder.ClearProviders();
+        builder.AddSimpleConsole(configure =>
+        {
+            configure.SingleLine = true;
+        });
+    })
     .ConfigureServices(services =>
     {
         services.AddSingleton<HostService>();
         services.AddSingleton<IModuleLoader, ModuleLoader>();
+        services.AddSingleton<IHostExportedFunctions, HostExportedFunctions>();
+        services.AddSingleton<IRegisterHostUnsafeNativeFunctions, HostExportedUnsafeNativeFunctions>();
     })
     .Build();
 
@@ -36,9 +51,19 @@ var brokerCommand = new Command("broker")
 
 brokerCommand.SetAction(_ =>
 {
-    Console.WriteLine("Not implemented");
+    host.Services.GetRequiredService<ILogger<Program>>()
+        .LogError("Not implemented");
     return 1;
 });
 
 var parser = CommandLineParser.Parse(new RootCommand { brokerCommand, hostCommand }, args);
-return await parser.InvokeAsync();
+try
+{
+    return await parser.InvokeAsync();
+}
+finally
+{
+    stopwatch.Stop();
+    host.Services.GetRequiredService<ILogger<Program>>()
+        .LogInformation("Execution time: {Time} ms", stopwatch.ElapsedMilliseconds);
+}

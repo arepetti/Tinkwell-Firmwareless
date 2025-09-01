@@ -1,57 +1,36 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace Tinkwell.Firmwareless.WamrAotHost.Hosting;
 
 static partial class WamrHost
 {
-    public static void CallExportVV(WasmInstance inst, IntPtr func)
+    public static void CallExportVV(WasmInstance inst, nint func, bool required = false)
     {
-        if (func == IntPtr.Zero)
+        Debug.Assert(inst.ExecEnv != nint.Zero);
+
+        if (IsCallable(inst, func, required) == false)
             return;
 
-        if (!Libiwasm.wasm_runtime_call_wasm(inst.ExecEnv, func, 0, IntPtr.Zero))
+        Console.WriteLine("Calling function");
+        if (!Libiwasm.wasm_runtime_call_wasm(inst.ExecEnv, func, 0, nint.Zero))
             throw new HostException($"Error calling (v)v WASM function: {GetLastError(inst)}");
     }
 
-    //public static void CallExportPIPIV(WasmInstance inst, IntPtr func, nint a, int b, nint c, int d)
-    //{
-    //    if (func == IntPtr.Zero)
-    //        return;
-
-    //    int argc = 2;
-    //    int size = IntPtr.Size + sizeof(int);
-    //    IntPtr argv = Marshal.AllocHGlobal(size);
-    //    try
-    //    {
-    //        unsafe
-    //        {
-    //            byte* p = (byte*)argv.ToPointer();
-    //            *(nint*)p = a;
-    //            *(int*)(p + sizeof(nint)) = b;
-    //            *(nint*)(p + sizeof(nint) + sizeof(int)) = c;
-    //            *(int*)(p + sizeof(nint) + sizeof(int) + sizeof(nint)) = d;
-    //        }
-
-    //        if (!Libiwasm.wasm_runtime_call_wasm(inst.ExecEnv, func, (uint)argc, argv))
-    //            Console.WriteLine("[HOST] wasm call failed (check your export signature and host build).");
-    //    }
-    //    finally
-    //    {
-    //        Marshal.FreeHGlobal(argv);
-    //    }
-    //}
-
-    public static void CallExportSV(WasmInstance inst, IntPtr func, string text)
+    public static void CallExportSV(WasmInstance inst, nint func, string text, bool required = false)
     {
-        if (func == IntPtr.Zero)
-            return;
+        Debug.Assert(inst.ExecEnv != nint.Zero);
 
-        var (ptr, len) = WasmMemory.CopyStringIntoModuleMemory(inst, text);
-        int ptrSize = inst.Wasm64 ? IntPtr.Size : sizeof(int);
+        if (IsCallable(inst, func, required) == false)
+            return;
+        Console.WriteLine("Calling function with ", text);
+
+        var (ptr, len) = WasmMemory.CopyStringIntoModuleMemoryAsUtf8(inst, text);
+        int ptrSize = inst.Wasm64 ? nint.Size : sizeof(int);
 
         int argc = 2;
-        int size = IntPtr.Size + sizeof(int);
-        IntPtr argv = Marshal.AllocHGlobal(size);
+        int size = ptrSize + sizeof(int);
+        nint argv = Marshal.AllocHGlobal(size);
         try
         {
             unsafe
@@ -72,5 +51,45 @@ static partial class WamrHost
             Marshal.FreeHGlobal(argv);
             WasmMemory.Free(inst, ptr);
         }
+    }
+
+
+    //public static void CallExportPIPIV(WasmInstance inst, nint func, nint a, int b, nint c, int d)
+    //{
+    //    if (func == IntPtr.Zero)
+    //        return;
+
+    //    int argc = 2;
+    //    int size = nint.Size + sizeof(int);
+    //    nint argv = Marshal.Alloc(size);
+    //    try
+    //    {
+    //        unsafe
+    //        {
+    //            byte* p = (byte*)argv.ToPointer();
+    //            *(nint*)p = a;
+    //            *(int*)(p + sizeof(nint)) = b;
+    //            *(nint*)(p + sizeof(nint) + sizeof(int)) = c;
+    //            *(int*)(p + sizeof(nint) + sizeof(int) + sizeof(nint)) = d;
+    //        }
+
+    //        if (!Libiwasm.wasm_runtime_call_wasm(inst.ExecEnv, func, (uint)argc, argv))
+    //            Console.WriteLine("[HOST] wasm call failed (check your export signature and host build).");
+    //    }
+    //    finally
+    //    {
+    //        Marshal.FreeHGlobal(argv);
+    //    }
+    //}
+
+    private static bool IsCallable(WasmInstance inst, nint func, bool required)
+    {
+        if (func != nint.Zero)
+            return true;
+
+        if (required)
+            throw new HostException($"Module {inst.Id} does not export a required function (or function signature mismatch).");
+
+        return false;
     }
 }

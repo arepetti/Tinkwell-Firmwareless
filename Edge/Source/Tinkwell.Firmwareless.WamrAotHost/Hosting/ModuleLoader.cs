@@ -2,14 +2,18 @@
 
 namespace Tinkwell.Firmwareless.WamrAotHost.Hosting;
 
-sealed class ModuleLoader(ILogger<ModuleLoader> logger) : IModuleLoader, IDisposable
+sealed class ModuleLoader(ILogger<ModuleLoader> logger, IRegisterHostUnsafeNativeFunctions exportedFunctions) : IModuleLoader, IDisposable
 {
     public void Load(string[] paths)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-
         Initialize();
         LoadModules(paths);
+    }
+
+    public void InitializeModules()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         StartInstances();
     }
 
@@ -20,6 +24,7 @@ sealed class ModuleLoader(ILogger<ModuleLoader> logger) : IModuleLoader, IDispos
     }
 
     private readonly ILogger<ModuleLoader> _logger = logger;
+    private readonly IRegisterHostUnsafeNativeFunctions _exportedFunctions = exportedFunctions;
     private readonly Dictionary<string, WasmInstance> _instances = new();
     private bool _disposed;
 
@@ -29,19 +34,7 @@ sealed class ModuleLoader(ILogger<ModuleLoader> logger) : IModuleLoader, IDispos
         WamrHost.Initialize();
 
         _logger.LogDebug("Registering native functions...");
-        WamrHost.RegisterNativeFunctions([
-            WamrHost.MakeNativeSymbol("abort",
-                new HostExportedFunctions.NativeAbortDelegate(HostExportedFunctions.Abort),
-                WamrHost.Signature(typeof(void), typeof(nint), typeof(nint), typeof(int), typeof(int))),
-
-            WamrHost.MakeNativeSymbol("tw_log",
-                new HostExportedFunctions.NativeLogDelegate(HostExportedFunctions.Log),
-                WamrHost.Signature(typeof(int), typeof(int), typeof(nint), typeof(int), typeof(nint), typeof(int))),
-
-            WamrHost.MakeNativeSymbol("tw_mqtt_publish",
-                new HostExportedFunctions.NativeMqttPublishDelegate(HostExportedFunctions.MqttPublish),
-                WamrHost.Signature(typeof(int), typeof(nint), typeof(int), typeof(nint), typeof(int)))
-        ]);
+        _exportedFunctions.RegisterAll();
     }
 
     private void LoadModules(string[] paths)
@@ -57,15 +50,15 @@ sealed class ModuleLoader(ILogger<ModuleLoader> logger) : IModuleLoader, IDispos
 
     private void StartInstances()
     {
-        _logger.LogInformation("Initializing...");
+        _logger.LogDebug("Initializing...");
         foreach (var inst in _instances)
             WamrHost.CallExportSV(inst.Value, inst.Value.OnInitializeFunc, inst.Key);
 
-        _logger.LogInformation("Starting...");
+        _logger.LogDebug("Starting...");
         foreach (var inst in _instances)
         {
             _logger.LogTrace("Starting {Name}...", inst.Key);
-            WamrHost.CallExportVV(inst.Value, inst.Value.OnStartFunc);
+            WamrHost.CallExportVV(inst.Value, inst.Value.OnStartFunc, required: true);
         }
     }
 

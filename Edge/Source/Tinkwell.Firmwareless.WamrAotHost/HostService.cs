@@ -5,10 +5,9 @@ sealed class HostService(ILogger<HostService> logger, IModuleLoader loader)
 {
     public void Start(string path, bool transient)
     {
-        var wasmFiles = Find(path, "*.wasm");
-        var aotFiles = Find(path, "*.aot");
 
-        _loader.Load(Enumerable.Concat(wasmFiles, aotFiles).ToArray());
+        _loader.Load(FindAllSourceFiles(path));
+        _loader.InitializeModules();
 
         if (!transient)
             WaitForTermination();
@@ -17,14 +16,21 @@ sealed class HostService(ILogger<HostService> logger, IModuleLoader loader)
     private readonly ILogger<HostService> _logger = logger;
     private readonly IModuleLoader _loader = loader;
 
-    private string[] Find(string path, string searchPattern)
+    private string[] FindAllSourceFiles(string path)
+    {
+        var wasmFiles = FindSourceFiles(path, "*.wasm");
+        var aotFiles = FindSourceFiles(path, "*.aot");
+        return Enumerable.Concat(wasmFiles, aotFiles).ToArray();
+    }
+
+    private string[] FindSourceFiles(string path, string searchPattern)
     {
         var files = Directory.GetFiles(path, searchPattern).ToArray();
-        _logger.LogInformation("Found {Count} {Extension} files in {Path}", files.Length, Path.GetExtension(searchPattern), path);
+        _logger.LogDebug("Found {Count} {Extension} file(s) in {Path}", files.Length, Path.GetExtension(searchPattern), path);
         return files;
     }
 
-    private void WaitForTermination()
+    private static void WaitForTermination()
     {
         if (Console.IsInputRedirected)
         {

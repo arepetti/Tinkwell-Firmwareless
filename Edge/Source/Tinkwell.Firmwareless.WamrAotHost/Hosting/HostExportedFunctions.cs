@@ -1,57 +1,41 @@
-﻿using System.Runtime.InteropServices;
+﻿using Microsoft.Extensions.Logging;
 
 namespace Tinkwell.Firmwareless.WamrAotHost.Hosting;
 
-static class HostExportedFunctions
+sealed class HostExportedFunctions(ILogger<HostExportedFunctions> logger) : IHostExportedFunctions
 {
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    public delegate void NativeAbortDelegate(nint execEnv, nint messagePtr, nint fileNamePtr, int line, int column);
-
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    public delegate int NativeMqttPublishDelegate(nint execEnv, nint topicPtr, int topicLen, nint payloadPtr, int payloadLen);
-
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    public delegate int NativeLogDelegate(nint execEnv, int severity, nint topicPtr, int topicLen, nint payloadPtr, int payloadLen);
-
-    public static void Abort(nint execEnv, nint messagePtr, nint fileNamePtr, int line, int column)
+    public void Abort(string message, string fileName, int lineNumber, int columnNumber)
     {
-        Console.WriteLine($"Fatal error!");
+        _logger.LogCritical("Fatal module error in {FileName} at {Line}:{Column}: {Message}", fileName, lineNumber, columnNumber, message);
         Environment.Exit(1);
     }
 
-    public static int MqttPublish(nint execEnv, nint topicPtr, int topicLen, nint payloadPtr, int payloadLen)
+    public void Log(int severity, string topic, string message)
     {
-        try
+        switch (severity)
         {
-            nint moduleInstance = WamrHost.GetModuleInstanceFromExecEnvHandle(execEnv);
-            string topic = WasmMemory.PtrToStringUtf8(moduleInstance, topicPtr, topicLen);
-            string payload = WasmMemory.PtrToStringUtf8(moduleInstance, payloadPtr, payloadLen);
-
-            Console.WriteLine($"[HOST] MQTT PUBLISH topic='{topic}' payload='{payload}'");
-            return 0;
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"[HOST] tw_mqtt_publish() error: {ex.Message}");
-            return -2;
+            case 0:
+                _logger.LogError("{Topic}: {Message}", topic, message);
+                break;
+            case 1:
+                _logger.LogWarning("{Topic}: {Message}", topic, message);
+                break;
+            case 2:
+                _logger.LogInformation("{Topic}: {Message}", topic, message);
+                break;
+            case 3:
+                _logger.LogDebug("{Topic}: {Message}", topic, message);
+                break;
+            default:
+                _logger.LogTrace("{Topic}: {Message}", topic, message);
+                break;
         }
     }
 
-    public static int Log(nint execEnv, int severity, nint topicPtr, int topicLen, nint messagePtr, int messageLen)
+    public void PublishMqttMessage(string topic, string payload)
     {
-        try
-        {
-            nint moduleInstance = WamrHost.GetModuleInstanceFromExecEnvHandle(execEnv);
-            string topic = WasmMemory.PtrToStringUtf8(moduleInstance, topicPtr, topicLen);
-            string message = WasmMemory.PtrToStringUtf8(moduleInstance, messagePtr, messageLen);
-
-            Console.WriteLine($"{severity} - {topic}: {message}");
-            return 0;
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"[HOST] tw_log() error: {ex.Message}");
-            return -2;
-        }
+        _logger.LogTrace("Publishing MQTT message in {Topic}: {Payload}", topic, payload);
     }
+
+    private readonly ILogger<HostExportedFunctions> _logger = logger;
 }

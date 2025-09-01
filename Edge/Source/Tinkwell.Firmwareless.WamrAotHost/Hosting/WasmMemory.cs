@@ -1,25 +1,63 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 
 namespace Tinkwell.Firmwareless.WamrAotHost.Hosting;
 
 static class WasmMemory
 {
-    public static string PtrToStringUtf8(nint moduleInstance, nint ptr, int length)
+    public static string Utf8PtrToString(nint moduleInstance, nint ptr, int length)
     {
+        Debug.Assert(moduleInstance != nint.Zero);
+        Debug.Assert(ptr != nint.Zero);
+        Debug.Assert(length > 0);
+
         if (!Libiwasm.wasm_runtime_validate_app_addr(moduleInstance, ptr, (uint)length))
-            throw new HostException($"Invalid memory offset {ptr} (size {length} in module {moduleInstance}.");
+            throw new HostException($"Invalid memory offset {ptr} (size {length}) in module {moduleInstance}.");
 
         var nativePtr = Libiwasm.wasm_runtime_addr_app_to_native(moduleInstance, ptr);
         if (nativePtr == nint.Zero)
-            throw new HostException($"Cannot map memory offset {ptr} (size {length} in module {moduleInstance} to the host.");
+            throw new HostException($"Cannot map memory offset {ptr} (size {length}) in module {moduleInstance} to the host.");
 
-        return NativeMemory.PtrToStringUtf8(nativePtr, length);
+        return NativeMemory.Utf8PtrToString(nativePtr, length);
     }
 
-    public static (nint Ptr, int Length) CopyStringIntoModuleMemory(WasmInstance inst, string text)
+    public static string HighlyUnsafeUtf8PtrToString(nint moduleInstance, nint ptr)
     {
+        Debug.Assert(moduleInstance != nint.Zero);
+        Debug.Assert(ptr != nint.Zero);
+
+        // We set an arbitrary maximum. The code using this function should be trusted because this should be used only by
+        // wasm compiler generated code but a malicious firmware could break it. With this limit we basically impose that
+        // the maxium message length is 512 bytes and that the string address (even if it's shorter!) cannot be in the last 512 bytes
+        // of any 64K memory section. Use with caution!
+        const int maximumLength = 512;
+        if (!Libiwasm.wasm_runtime_validate_app_addr(moduleInstance, ptr, maximumLength))
+            throw new HostException($"Invalid memory offset {ptr} (unknown size) in module {moduleInstance}.");
+
+        var nativePtr = Libiwasm.wasm_runtime_addr_app_to_native(moduleInstance, ptr);
+        if (nativePtr == nint.Zero)
+            throw new HostException($"Cannot map memory offset {ptr} (unknown size) in module {moduleInstance} to the host.");
+
+        int length = 0;
+        unsafe
+        {
+            byte* p = (byte*)ptr;
+            while (*p++ != 0 && length < maximumLength)
+                ++length;
+        }
+
+        if (length == 0)
+            return "";
+
+        return NativeMemory.Utf8PtrToString(nativePtr, length);
+    }
+
+    public static (nint Ptr, int Length) CopyStringIntoModuleMemoryAsUtf8(WasmInstance inst, string text)
+    {
+        Debug.Assert(inst.Instance != nint.Zero);
+
         var utf8 = Encoding.UTF8.GetBytes(text);
-        nint ptr = Alloc(inst, utf8.Length);
+        var ptr = Alloc(inst, utf8.Length);
         unsafe
         {
             nint dest = Libiwasm.wasm_runtime_addr_app_to_native(inst.Instance, ptr);
@@ -34,13 +72,21 @@ static class WasmMemory
 
     public static nint Alloc(WasmInstance inst, int size)
     {
+        Debug.Assert(inst.Instance != nint.Zero);
+        Debug.Assert(size > 0);
+
         var wasmPtr = Libiwasm.wasm_runtime_module_malloc(inst.Instance, (uint)size, out nint _);
-        if (wasmPtr == IntPtr.Zero)
-            throw new OutOfMemoryException("WASM malloc failed");
+        if (wasmPtr == nint.Zero)
+            throw new HostException("WASM malloc failed: out of memory");
 
         return wasmPtr;
     }
 
     public static void Free(WasmInstance inst, nint wasmPtr)
-        => Libiwasm.wasm_runtime_module_free(inst.Instance, wasmPtr);
+    {
+        Debug.Assert(inst.Instance != nint.Zero);
+        Debug.Assert(wasmPtr != nint.Zero);
+
+        Libiwasm.wasm_runtime_module_free(inst.Instance, wasmPtr);
+    }
 }

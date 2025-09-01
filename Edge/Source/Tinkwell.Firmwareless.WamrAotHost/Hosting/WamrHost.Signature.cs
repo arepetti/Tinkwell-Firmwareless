@@ -24,6 +24,7 @@ static partial class WamrHost
             var _ when t == typeof(float) => 'f',
             var _ when t == typeof(double) => 'd',
             var _ when t == typeof(nint) => 'i', // TODO: if the module is wasm64 then this is "l"
+            var _ when t == typeof(void) => 'v',
             _ => throw new NotSupportedException($"Type '{t.FullName}' is not supported in WAMR signatures.")
         };
 }

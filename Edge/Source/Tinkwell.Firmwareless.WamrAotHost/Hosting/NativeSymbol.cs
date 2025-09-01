@@ -5,8 +5,8 @@ namespace Tinkwell.Firmwareless.WamrAotHost.Hosting;
 [StructLayout(LayoutKind.Sequential)]
 struct NativeSymbol
 {
-    public IntPtr Symbol;
-    public IntPtr FuncPtr; // void*
-    public IntPtr Signature;
-    public IntPtr Attachment; // void*
+    public nint Symbol; // char*
+    public nint FuncPtr; // void*
+    public nint Signature; // char*
+    public nint Attachment; // void*
 }

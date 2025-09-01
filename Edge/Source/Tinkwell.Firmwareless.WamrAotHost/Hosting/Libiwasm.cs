@@ -54,7 +54,7 @@ static class Libiwasm
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
     public static extern IntPtr wasm_runtime_lookup_function(IntPtr moduleInst,
         [MarshalAs(UnmanagedType.LPStr)] string name,
-        [MarshalAs(UnmanagedType.LPStr)] string signature /* can be null to ignore */);
+        [MarshalAs(UnmanagedType.LPStr)] string? signature);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
     public static extern IntPtr wasm_runtime_get_module_inst(IntPtr execEnv);
