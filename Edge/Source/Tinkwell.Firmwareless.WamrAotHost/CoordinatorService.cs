@@ -1,0 +1,30 @@
+﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Tinkwell.Firmwareless.WamrAotHost.Coordinator;
+
+namespace Tinkwell.Firmwareless.WamrAotHost;
+
+sealed record CoordinatorServiceOptions(string Path, string Parent, bool Transient);
+
+sealed class CoordinatorService(ILogger<CoordinatorService> logger, HostProcessesCoordinator coordinator, CoordinatorServiceOptions options) : BackgroundService
+{
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        string pipeName = IdHelpers.CreateId("tinkwell", 8);
+        _logger.LogInformation("Parent URL: {Parent}", _options.Parent);
+        _logger.LogInformation("Firmlets root path: {Path}", _options.Path);
+        _logger.LogInformation("Coordinator pipe name is: {PipeName}", pipeName);
+
+        _logger.LogInformation("Starting firmlets...");
+        _coordinator.Start(pipeName, Directory.GetDirectories(_options.Path));
+
+        if (!_options.Transient)
+            stoppingToken.WaitHandle.WaitOne();
+
+        return Task.CompletedTask;
+    }
+
+    private readonly ILogger<CoordinatorService> _logger = logger;
+    private readonly CoordinatorServiceOptions _options = options;
+    private readonly HostProcessesCoordinator _coordinator = coordinator;
+}

@@ -1,7 +1,10 @@
 ﻿namespace Tinkwell.Firmwareless.WamrAotHost.Hosting;
 
-interface IModuleLoader
+interface IWamrHost
 {
     void Load(string[] paths);
     void InitializeModules();
+    void Start();
+
+    void Stop();
 }

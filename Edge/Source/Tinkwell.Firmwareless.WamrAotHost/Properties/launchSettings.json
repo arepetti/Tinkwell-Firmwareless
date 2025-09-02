@@ -2,7 +2,7 @@
   "profiles": {
     "Container (Dockerfile)": {
       "commandName": "Docker",
-      "commandLineArgs": "host . --transient"
+      "commandLineArgs": "coordinator --path=./TestFirmwares --parent=none"
     }
   }
 }

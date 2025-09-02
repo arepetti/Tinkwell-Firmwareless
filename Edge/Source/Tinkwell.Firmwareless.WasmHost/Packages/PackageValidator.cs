@@ -27,6 +27,13 @@ sealed class PackageValidator(IPublicRepository repository) : IPackageValidator
     {
         foreach (var manifestEntry in ReadIntegrityManifest(path, archive))
         {
+            // We do this "just to be sure", down in the pipeline we process only entries verified using the
+            // compilation server signature (which is trusted!) and the package itself is created by the server. Even if
+            // a malicious actor tampers with the archive at rest (in the Hub) or while in transit adding a malicious
+            // payload then it won't ever be unzipped anywhere.
+            if (!IsSafeEntryName(manifestEntry.ArchiveEntryName))
+                throw new FirmwareValidationException($"Entry {manifestEntry.ArchiveEntryName} has an invalid name.");
+
             using var entryStream = archive.OpenEntry(manifestEntry.ArchiveEntryName);
             var computedHash = ComputeSha512(entryStream);
 
@@ -127,4 +134,7 @@ sealed class PackageValidator(IPublicRepository repository) : IPackageValidator
 
         return targetVersion >= baseVersion && targetVersion < upperBound;
     }
+
+    private static bool IsSafeEntryName(string entryName)
+        => !string.IsNullOrWhiteSpace(entryName) && !entryName.StartsWith('/') && !entryName.Contains("../");
 }

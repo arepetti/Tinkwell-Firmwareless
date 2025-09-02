@@ -1,20 +1,38 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Tinkwell.Firmwareless.WamrAotHost.Hosting;
+using Tinkwell.Firmwareless.WamrAotHost.Ipc;
 
-sealed class HostService(ILogger<HostService> logger, IModuleLoader loader)
+namespace Tinkwell.Firmwareless.WamrAotHost;
+
+sealed record HostServiceOptions(string Path, string Id, string PipeName, bool Transient);
+
+sealed class HostService(ILogger<HostService> logger, HostServiceOptions options, IpcClient ipcClient, IWamrHost wamrHost) : BackgroundService
 {
-    public void Start(string path, bool transient)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        _logger.LogInformation("Wamr host {Id}, channel {PipeName}, modules in {Path}.", _options.Id, _options.PipeName, _options.Path);
+        _wamrHost.Load(FindAllSourceFiles(_options.Path));
 
-        _loader.Load(FindAllSourceFiles(path));
-        _loader.InitializeModules();
+        _logger.LogDebug("Initializing host {HostId}...", _options.Id);
+        _wamrHost.InitializeModules();
+        _wamrHost.Start();
+        _logger.LogDebug("Host {HostId} started", _options.Id);
 
-        if (!transient)
-            WaitForTermination();
+        _logger.LogDebug("Notifying coordinator through {PipeName}...", _options.PipeName);
+        await _ipcClient.StartClientAsync(_options.PipeName, _options.Id, this, stoppingToken);
+
+        if (!_options.Transient)
+            stoppingToken.WaitHandle.WaitOne();
+
+        await _ipcClient.DisconnectAsync();
+        _wamrHost.Stop();
     }
 
     private readonly ILogger<HostService> _logger = logger;
-    private readonly IModuleLoader _loader = loader;
+    private readonly HostServiceOptions _options = options;
+    private readonly IpcClient _ipcClient = ipcClient;
+    private readonly IWamrHost _wamrHost = wamrHost;
 
     private string[] FindAllSourceFiles(string path)
     {
@@ -28,24 +46,5 @@ sealed class HostService(ILogger<HostService> logger, IModuleLoader loader)
         var files = Directory.GetFiles(path, searchPattern).ToArray();
         _logger.LogDebug("Found {Count} {Extension} file(s) in {Path}", files.Length, Path.GetExtension(searchPattern), path);
         return files;
-    }
-
-    private static void WaitForTermination()
-    {
-        if (Console.IsInputRedirected)
-        {
-            Console.WriteLine("Press CTRL+C to exit");
-            do
-            {
-                var key = Console.ReadKey(true);
-                if (key.Key == ConsoleKey.C && key.Modifiers == ConsoleModifiers.Control)
-                    break;
-            } while (true);
-        }
-        else
-        {
-            Console.WriteLine("Press any key to exit");
-            Console.Read();
-        }
     }
 }

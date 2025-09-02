@@ -27,18 +27,18 @@ sealed class HostExportedUnsafeNativeFunctions(ILogger<HostExportedUnsafeNativeF
 
         _instance = this;
 
-        WamrHost.RegisterNativeFunctions([
-            WamrHost.MakeNativeSymbol(nameof(abort),
+        Wamr.RegisterNativeFunctions([
+            Wamr.MakeNativeSymbol(nameof(abort),
                 new NativeAbortDelegate(abort),
-                WamrHost.Signature(typeof(void), typeof(nint), typeof(nint), typeof(int), typeof(int))),
+                Wamr.Signature(typeof(void), typeof(nint), typeof(nint), typeof(int), typeof(int))),
 
-            WamrHost.MakeNativeSymbol(nameof(tw_log),
+            Wamr.MakeNativeSymbol(nameof(tw_log),
                 new NativeLogDelegate(tw_log),
-                WamrHost.Signature(typeof(int), typeof(int), typeof(nint), typeof(int), typeof(nint), typeof(int))),
+                Wamr.Signature(typeof(int), typeof(int), typeof(nint), typeof(int), typeof(nint), typeof(int))),
 
-            WamrHost.MakeNativeSymbol(nameof(tw_mqtt_publish),
+            Wamr.MakeNativeSymbol(nameof(tw_mqtt_publish),
                 new NativeMqttPublishDelegate(tw_mqtt_publish),
-                WamrHost.Signature(typeof(int), typeof(nint), typeof(int), typeof(nint), typeof(int)))
+                Wamr.Signature(typeof(int), typeof(nint), typeof(int), typeof(nint), typeof(int)))
         ]);
     }
 
@@ -52,7 +52,7 @@ sealed class HostExportedUnsafeNativeFunctions(ILogger<HostExportedUnsafeNativeF
         Debug.Assert(_instance is not null);
         try
         {
-            nint moduleInstance = WamrHost.GetModuleInstanceFromExecEnvHandle(execEnv);
+            nint moduleInstance = Wamr.GetModuleInstanceFromExecEnvHandle(execEnv);
             string message = WasmMemory.HighlyUnsafeUtf8PtrToString(moduleInstance, messagePtr);
             string fileName = WasmMemory.HighlyUnsafeUtf8PtrToString(fileNamePtr, messagePtr);
 
@@ -71,7 +71,7 @@ sealed class HostExportedUnsafeNativeFunctions(ILogger<HostExportedUnsafeNativeF
         Debug.Assert(_instance is not null);
         try
         {
-            nint moduleInstance = WamrHost.GetModuleInstanceFromExecEnvHandle(execEnv);
+            nint moduleInstance = Wamr.GetModuleInstanceFromExecEnvHandle(execEnv);
             string topic = WasmMemory.Utf8PtrToString(moduleInstance, topicPtr, topicLen);
             string message = WasmMemory.Utf8PtrToString(moduleInstance, messagePtr, messageLen);
 
@@ -91,7 +91,7 @@ sealed class HostExportedUnsafeNativeFunctions(ILogger<HostExportedUnsafeNativeF
         Debug.Assert(_instance is not null);
         try
         {
-            nint moduleInstance = WamrHost.GetModuleInstanceFromExecEnvHandle(execEnv);
+            nint moduleInstance = Wamr.GetModuleInstanceFromExecEnvHandle(execEnv);
             string topic = WasmMemory.Utf8PtrToString(moduleInstance, topicPtr, topicLen);
             string payload = WasmMemory.Utf8PtrToString(moduleInstance, payloadPtr, payloadLen);
 

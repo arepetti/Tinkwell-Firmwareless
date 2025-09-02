@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
-using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using Tinkwell.Firmwareless.WasmHost.Packages;
@@ -53,7 +52,7 @@ sealed class HostedService(ILogger<HostedService> logger, IPackageDiscovery disc
                 return new(firmwareDirectoryName, manifest);
 
             _logger.LogInformation("Unpacking {Name} to {Path}", Path.GetFileName(path), firmwareDirectoryName);
-            ZipFile.ExtractToDirectory(path, firmwareDirectoryName);
+            PackageUnpacker.ExtractToDirectory(path, firmwareDirectoryName);
             return new(firmwareDirectoryName, manifest);
         }
         catch (Exception e)

@@ -1,69 +1,58 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System.CommandLine;
-using System.CommandLine.Parsing;
+using Microsoft.Extensions.Options;
 using System.Diagnostics;
+using Tinkwell.Firmwareless.WamrAotHost;
+using Tinkwell.Firmwareless.WamrAotHost.Coordinator;
 using Tinkwell.Firmwareless.WamrAotHost.Hosting;
+using Tinkwell.Firmwareless.WamrAotHost.Ipc;
 
 var stopwatch = new Stopwatch();
 stopwatch.Start();
 
-using var host = Host.CreateDefaultBuilder([])
-    .ConfigureLogging(builder =>
-    {
-        builder.ClearProviders();
-        builder.AddSimpleConsole(configure =>
-        {
-            configure.SingleLine = true;
-        });
-    })
-    .ConfigureServices(services =>
-    {
-        services.AddSingleton<HostService>();
-        services.AddSingleton<IModuleLoader, ModuleLoader>();
-        services.AddSingleton<IHostExportedFunctions, HostExportedFunctions>();
-        services.AddSingleton<IRegisterHostUnsafeNativeFunctions, HostExportedUnsafeNativeFunctions>();
-    })
-    .Build();
+var cli = new CommandLineParser(args);
+var builder = Host.CreateDefaultBuilder(args);
 
-var hostCommandPathArg = new Argument<string>("path").AcceptLegalFilePathsOnly();
-var hostCommandTransientOption = new Option<bool>("--transient");
-var hostCommand = new Command("host")
+builder.ConfigureLogging(logging =>
 {
-    hostCommandPathArg,
-    hostCommandTransientOption
-};
-
-hostCommand.SetAction(pr =>
-{
-    var service = host.Services.GetRequiredService<HostService>();
-    service.Start(pr.GetRequiredValue(hostCommandPathArg), pr.GetValue(hostCommandTransientOption));
+    logging.ClearProviders();
+    logging.AddSimpleConsole(configure => { configure.SingleLine = true; });
 });
 
-var brokerCommandPathArg = new Argument<string>("path").AcceptLegalFilePathsOnly();
-var brokerCommandParentUrlArg = new Argument<string>("parent");
-var brokerCommand = new Command("broker")
+builder.ConfigureServices((context, services) =>
 {
-    brokerCommandPathArg,
-    brokerCommandParentUrlArg
-};
+    services
+        .AddOptions<Settings>()
+        .BindConfiguration("Settings");
 
-brokerCommand.SetAction(_ =>
-{
-    host.Services.GetRequiredService<ILogger<Program>>()
-        .LogError("Not implemented");
-    return 1;
+    services.AddSingleton(resolver => resolver.GetRequiredService<IOptions<Settings>>().Value);
+
+    if (cli.RequiredService == RequiredService.Host)
+    {
+        services
+           .AddSingleton<IWamrHost, WamrHost>()
+           .AddSingleton<IHostExportedFunctions, HostExportedFunctions>()
+           .AddSingleton<IRegisterHostUnsafeNativeFunctions, HostExportedUnsafeNativeFunctions>()
+           .AddSingleton(cli.GetHostServiceOptions())
+           .AddSingleton<IpcClient>()
+           .AddHostedService<HostService>();
+    }
+    else
+    {
+        services
+            .AddSingleton(cli.GetCoordinatorServiceOptions())
+            .AddSingleton<IpcServer>()
+            .AddSingleton<HostProcessesCoordinator>()
+            .AddHostedService<CoordinatorService>();
+    }
 });
 
-var parser = CommandLineParser.Parse(new RootCommand { brokerCommand, hostCommand }, args);
-try
-{
-    return await parser.InvokeAsync();
-}
-finally
-{
-    stopwatch.Stop();
-    host.Services.GetRequiredService<ILogger<Program>>()
-        .LogInformation("Execution time: {Time} ms", stopwatch.ElapsedMilliseconds);
-}
+using var host = builder.Build();
+await host.StartAsync();
+
+stopwatch.Stop();
+Console.WriteLine($"Execution time for {cli.Name} is: {stopwatch.ElapsedMilliseconds} ms");
+
+return 0;
+

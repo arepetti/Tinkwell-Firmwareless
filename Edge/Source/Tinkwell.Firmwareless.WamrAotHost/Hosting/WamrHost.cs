@@ -1,118 +1,92 @@
-﻿using System.Diagnostics;
-using System.Runtime.InteropServices;
+﻿using Microsoft.Extensions.Logging;
 
 namespace Tinkwell.Firmwareless.WamrAotHost.Hosting;
 
-static partial class WamrHost
+sealed class WamrHost(ILogger<WamrHost> logger, IRegisterHostUnsafeNativeFunctions exportedFunctions) : IWamrHost, IDisposable
 {
-    public static void Initialize()
+    public void Load(string[] paths)
     {
-        if (!Libiwasm.wasm_runtime_init())
-            throw new HostException("Failed to init WAMR.");
-
-        Libiwasm.wasm_runtime_set_log_level(Libiwasm.WamrLogLevel.Warning);
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        Initialize();
+        LoadModules(paths);
     }
 
-    public static nint GetModuleInstanceFromExecEnvHandle(nint execEnv)
+    public void InitializeModules()
     {
-        Debug.Assert(execEnv != nint.Zero);
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
-        nint moduleInstance = Libiwasm.wasm_runtime_get_module_inst(execEnv);
-        if (moduleInstance == nint.Zero)
-            throw new HostException($"Cannot find the module instance for {execEnv}.");
-
-        return moduleInstance;
+        _logger.LogDebug("Initializing...");
+        foreach (var inst in _instances)
+            Wamr.CallExportSV(inst.Value, inst.Value.OnInitializeFunc, inst.Key);
     }
 
-    public static NativeSymbol MakeNativeSymbol<T>(string name, T del, string signature) where T : notnull, Delegate
+    public void Start()
     {
-        NativeMemory.Pin(del);
-        return new NativeSymbol
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        _logger.LogDebug("Starting...");
+        foreach (var inst in _instances)
         {
-            Symbol = NativeMemory.StringToHGlobalAnsi(name),
-            FuncPtr = Marshal.GetFunctionPointerForDelegate(del),
-            Signature = NativeMemory.StringToHGlobalAnsi(signature),
-            Attachment = IntPtr.Zero
-        };
-    }
-
-    public static void RegisterNativeFunctions(params NativeSymbol[] syms)
-    {
-        if (_moduleNamePtr == IntPtr.Zero)
-            _moduleNamePtr = NativeMemory.StringToHGlobalAnsi("env");
-
-        int size = Marshal.SizeOf<NativeSymbol>() * syms.Length;
-        _symbolsPtr = NativeMemory.Alloc(size);
-
-        nint cur = _symbolsPtr;
-        foreach (var s in syms)
-        {
-            Marshal.StructureToPtr(s, cur, false);
-            cur += Marshal.SizeOf<NativeSymbol>();
+            _logger.LogTrace("Starting {Name}...", inst.Key);
+            Wamr.CallExportVV(inst.Value, inst.Value.OnStartFunc, required: true);
         }
-
-        if (!Libiwasm.wasm_runtime_register_natives(_moduleNamePtr, _symbolsPtr, (uint)syms.Length))
-            throw new HostException("Failed to register native functions.");
     }
 
-    public static WasmInstance LoadInstance(string id, string modulePath)
+    public void Stop()
     {
-        Debug.Assert(!string.IsNullOrWhiteSpace(id));
-        Debug.Assert(!string.IsNullOrWhiteSpace(modulePath));
+        _logger.LogInformation("Terminating...");
 
-        IntPtr errorMessage;
-        IntPtr moduleInstance;
+        foreach (var inst in _instances)
+            Wamr.CallExportVV(inst.Value, inst.Value.OnDisposeFunc);
+    }
 
-        if (modulePath.EndsWith(".aot", StringComparison.OrdinalIgnoreCase))
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private readonly ILogger<WamrHost> _logger = logger;
+    private readonly IRegisterHostUnsafeNativeFunctions _exportedFunctions = exportedFunctions;
+    private readonly Dictionary<string, WasmInstance> _instances = new();
+    private bool _disposed;
+
+    private void Initialize()
+    {
+        _logger.LogDebug("Initializing WAMR runtime...");
+        Wamr.Initialize();
+
+        _logger.LogDebug("Registering native functions...");
+        _exportedFunctions.RegisterAll();
+    }
+
+    private void LoadModules(string[] paths)
+    {
+        foreach (var path in paths)
         {
-            moduleInstance = Libiwasm.wasm_runtime_load_from_aot_file(modulePath, out errorMessage, 512);
-            if (moduleInstance == nint.Zero)
-                throw new HostException($"Failed to load AOT module '{modulePath}': {NativeMemory.AnsiPtrToString(errorMessage)}");
+            var id = $"_{_instances.Count}_{Path.GetFileNameWithoutExtension(path)}_";
+            _logger.LogInformation("Loading module {Path}", path);
+            var inst = Wamr.LoadInstance(id, path);
+            _instances[id] = inst;
         }
-        else
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (_disposed)
+            return;
+
+        try
         {
-            var bytes = File.ReadAllBytes(modulePath);
-            moduleInstance = Libiwasm.wasm_runtime_load(bytes, (uint)bytes.Length, out errorMessage, 512);
-            if (moduleInstance == nint.Zero)
-                throw new HostException($"Failed to load WASM module '{modulePath}': {NativeMemory.AnsiPtrToString(errorMessage)}");
+            foreach (var inst in _instances.Values)
+                inst.Dispose();
+
+            Wamr.Shutdown();
+            _logger.LogDebug("WASM runtime has been disposed");
         }
-
-        var inst = Libiwasm.wasm_runtime_instantiate(moduleInstance, stackSize: 64 * 1024, heapSize: 64 * 1024, out errorMessage, 512);
-        if (inst == nint.Zero)
-            throw new HostException($"Failed to instantiate module '{modulePath}': {NativeMemory.AnsiPtrToString(errorMessage)}");
-
-        var execEnv = Libiwasm.wasm_runtime_create_exec_env(inst, 64 * 1024);
-        if (execEnv == nint.Zero)
-            throw new HostException("Failed to create execution environment.");
-
-        bool wasm64 = false; // TODO: we need to inspect the moduleInstance or use the manifest or a CLI parameter
-
-        return new WasmInstance(id, moduleInstance, inst, execEnv, wasm64)
+        finally
         {
-            OnInitializeFunc = Libiwasm.wasm_runtime_lookup_function(inst, "_initialize", Signature(typeof(void), typeof(nint), typeof(int))),
-            OnStartFunc = Libiwasm.wasm_runtime_lookup_function(inst, "_start", Signature(typeof(void), typeof(void))),
-            OnDisposeFunc = Libiwasm.wasm_runtime_lookup_function(inst, "_dispose", Signature(typeof(void), typeof(void))),
-            OnMessageFunc = Libiwasm.wasm_runtime_lookup_function(inst, "_on_message_received", Signature(typeof(void), typeof(nint), typeof(int), typeof(nint), typeof(int))),
-        };
-    }
-
-    public static void Shutdown()
-    {
-        NativeMemory.FreeAll();
-        _moduleNamePtr = IntPtr.Zero;
-        _symbolsPtr = IntPtr.Zero;
-
-        Libiwasm.wasm_runtime_destroy();
-    }
-
-    private static IntPtr _moduleNamePtr = IntPtr.Zero;
-    private static IntPtr _symbolsPtr = IntPtr.Zero;
-
-    private static string GetLastError(WasmInstance inst)
-    {
-        Debug.Assert(inst.Instance != nint.Zero);
-
-        var errPtr = Libiwasm.wasm_runtime_get_exception(inst.Instance);
-        return NativeMemory.AnsiPtrToString(errPtr);
+            _disposed = true;
+        }
     }
 }
