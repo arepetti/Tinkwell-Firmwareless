@@ -13,10 +13,10 @@ sealed record HostServiceOptions(string Path, string Id, string PipeName, bool T
 sealed class HostService(IHost host, ILogger<HostService> logger, HostServiceOptions options, IpcClient ipcClient, IWamrHost wamrHost) : BackgroundService
 {
     [JsonRpcMethod(HostMethods.Shutdown)]
-    public void Shutdown()
+    public async void Shutdown()
     {
         _logger.LogInformation("Shutting down {HostId} (coordinator requested)...", _options.Id);
-        _ = _host.StopAsync();
+        await _host.StopAsync();
     }
 
     [DynamicDependency(nameof(Shutdown), typeof(HostService))]
