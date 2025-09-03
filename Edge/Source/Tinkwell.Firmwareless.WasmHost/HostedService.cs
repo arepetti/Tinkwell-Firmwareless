@@ -46,7 +46,7 @@ sealed class HostedService(ILogger<HostedService> logger, IPackageDiscovery disc
                 cachePath,
                 ShortenGuid(manifest.VendorId, 12),
                 ShortenGuid(manifest.ProductId, 8),
-                manifest.FirmwareVersion);
+                Sanitize(manifest.FirmwareVersion));
 
             if (Directory.Exists(firmwareDirectoryName))
                 return new(firmwareDirectoryName, manifest);
@@ -67,5 +67,8 @@ sealed class HostedService(ILogger<HostedService> logger, IPackageDiscovery disc
             var hash = SHA256.HashData(Encoding.UTF8.GetBytes(id));
             return Convert.ToHexStringLower(hash)[..length];
         }
+
+        static string Sanitize(string text)
+            => text.Replace('/', '_').Replace('\\', '_'); // A bit paranoic but it's an "external" input...
     }
 }

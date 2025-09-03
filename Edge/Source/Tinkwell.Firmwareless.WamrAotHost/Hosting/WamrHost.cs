@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Reflection.Metadata;
 
 namespace Tinkwell.Firmwareless.WamrAotHost.Hosting;
 
@@ -62,10 +63,11 @@ sealed class WamrHost(ILogger<WamrHost> logger, IRegisterHostUnsafeNativeFunctio
 
     private void LoadModules(string[] paths)
     {
-        foreach (var path in paths)
+        for (int index=0; index < paths.Length; ++index)
         {
-            var id = $"_{_instances.Count}_{Path.GetFileNameWithoutExtension(path)}_";
-            _logger.LogInformation("Loading module {Path}", path);
+            string path = paths[index];
+            var id = $"_{index}_{Path.GetFileNameWithoutExtension(path)}_";
+            _logger.LogInformation("Loading module {Index} of {Count}: {Path}", index, paths.Length, path);
             var inst = Wamr.LoadInstance(id, path);
             _instances[id] = inst;
         }

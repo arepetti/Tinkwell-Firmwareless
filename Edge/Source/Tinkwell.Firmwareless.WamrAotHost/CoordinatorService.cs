@@ -13,7 +13,7 @@ sealed class CoordinatorService(ILogger<CoordinatorService> logger, HostProcesse
         string pipeName = IdHelpers.CreateId("tinkwell", 8);
         _logger.LogInformation("Parent URL: {Parent}", _options.Parent);
         _logger.LogInformation("Firmlets root path: {Path}", _options.Path);
-        _logger.LogInformation("Coordinator pipe name is: {PipeName}", pipeName);
+        _logger.LogInformation("Coordinator pipe name: {PipeName}", pipeName);
 
         _logger.LogInformation("Starting firmlets...");
         _coordinator.Start(pipeName, Directory.GetDirectories(_options.Path));

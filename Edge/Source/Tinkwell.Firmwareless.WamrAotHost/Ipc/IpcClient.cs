@@ -25,6 +25,12 @@ sealed class IpcClient(ILogger<IpcClient> logger, Settings settings) : IpcBase, 
             await pipeClient.DisposeAsync();
     }
 
+    void IDisposable.Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
     private readonly ILogger<IpcClient> _logger = logger;
     private readonly Settings _settings = settings;
     private JsonRpc? rpc;
@@ -57,7 +63,7 @@ sealed class IpcClient(ILogger<IpcClient> logger, Settings settings) : IpcBase, 
                 rpc.StartListening();
 
                 _logger.LogDebug("Registering the host {HostId}", _id);
-                await rpc.NotifyAsync("RegisterClient", new RegisterClientRequest { ClientName = _id });
+                await rpc.NotifyAsync(CoordinatorMethods.RegisterClient, new RegisterClientRequest { ClientName = _id });
                 return;
             }
             catch (IOException e)
@@ -94,11 +100,5 @@ sealed class IpcClient(ILogger<IpcClient> logger, Settings settings) : IpcBase, 
         }
 
         _disposed = true;
-    }
-
-    public void Dispose()
-    {
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
     }
 }

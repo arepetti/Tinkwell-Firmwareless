@@ -1,11 +1,15 @@
-using Tinkwell.Firmwareless.WamrAotHost;
+namespace Tinkwell.Firmwareless.WamrAotHost;
 
-public enum RequiredService
+enum RequiredService
 {
     Host,
     Coordinator
 }
 
+// We could use a library for this but between AOT trimming (Spectre), compatibility with
+// Microsoft.Extensions.Hosting (current beta of System.CommandLine) and bloating...it's faster/easier
+// to "parse" it: the use case for this app is EXTREMELY simple and what we need is basically a
+// list of key-value pairs passed from the command line.
 sealed class CommandLineParser
 {
     public CommandLineParser(string[] args)

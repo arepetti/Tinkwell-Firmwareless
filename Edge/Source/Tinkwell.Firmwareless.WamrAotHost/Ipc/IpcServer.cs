@@ -29,6 +29,23 @@ sealed class IpcServer(ILogger<IpcServer> logger, Settings settings) : IpcBase, 
         }
     }
 
+    public Task NotifyAsync(string hostId, string notificationName)
+    {
+        if (_clients.TryGetValue(hostId, out var rpc))
+            return rpc.NotifyAsync(notificationName);
+
+        _logger.LogWarning("Cannot find host {HostId} to send notification '{Notification}'", hostId, notificationName);
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        foreach (var rpc in _clients.Values)
+            rpc.Dispose();
+        _cts.Dispose();
+    }
+
     private readonly ILogger<IpcServer> _logger = logger;
     private readonly Settings _settings = settings;
     private string? _pipeName;
@@ -62,13 +79,5 @@ sealed class IpcServer(ILogger<IpcServer> logger, Settings settings) : IpcBase, 
             await Task.Delay(Timeout.Infinite, _cts.Token);
         }
         catch (TaskCanceledException) { }
-    }
-
-    public void Dispose()
-    {
-        _cts.Cancel();
-        foreach (var rpc in _clients.Values)
-            rpc.Dispose();
-        _cts.Dispose();
     }
 }

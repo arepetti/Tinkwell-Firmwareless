@@ -26,7 +26,7 @@ builder.ConfigureServices((context, services) =>
         .AddOptions<Settings>()
         .BindConfiguration("Settings");
 
-    services.AddSingleton(resolver => resolver.GetRequiredService<IOptions<Settings>>().Value);
+    services.AddSingleton(x => x.GetRequiredService<IOptions<Settings>>().Value);
 
     if (cli.RequiredService == RequiredService.Host)
     {
@@ -43,6 +43,7 @@ builder.ConfigureServices((context, services) =>
         services
             .AddSingleton(cli.GetCoordinatorServiceOptions())
             .AddSingleton<IpcServer>()
+            .AddSingleton<SystemResourcesUsageArbiter>()
             .AddSingleton<HostProcessesCoordinator>()
             .AddHostedService<CoordinatorService>();
     }

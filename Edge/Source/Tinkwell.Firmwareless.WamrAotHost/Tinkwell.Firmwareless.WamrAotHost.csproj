@@ -11,6 +11,8 @@
 
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
         <ContainerDevelopmentMode>Regular</ContainerDevelopmentMode>
+
+        <EnableStreamJsonRpcInterceptors>true</EnableStreamJsonRpcInterceptors>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -27,8 +29,6 @@
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.8" />
         <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
         <PackageReference Include="StreamJsonRpc" Version="2.22.11" />
-        <PackageReference Include="System.CommandLine" Version="2.0.0-beta7.25380.108" />
-        <PackageReference Include="System.CommandLine.Hosting" Version="0.4.0-alpha.25306.1" />
     </ItemGroup>
 
     <ItemGroup>
