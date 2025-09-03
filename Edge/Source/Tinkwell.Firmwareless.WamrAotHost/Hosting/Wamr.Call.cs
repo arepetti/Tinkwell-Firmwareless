@@ -30,6 +30,33 @@ static partial class Wamr
             throw new HostException($"Error calling (v)v WASM function: {GetLastError(inst)}");
     }
 
+    public static void CallExportIV(WasmInstance inst, nint func, int arg, bool required = false)
+    {
+        Debug.Assert(inst.ExecEnv != nint.Zero);
+
+        if (IsCallable(inst, func, required) == false)
+            return;
+
+        int argc = 1;
+        int size = sizeof(int);
+        nint argv = Marshal.AllocHGlobal(size);
+        try
+        {
+            unsafe
+            {
+                byte* p = (byte*)argv.ToPointer();
+                *(int*)p = arg;
+            }
+
+            if (!Libiwasm.wasm_runtime_call_wasm(inst.ExecEnv, func, (uint)argc, argv))
+                throw new HostException($"Error calling (i)v WASM function: {GetLastError(inst)}");
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(argv);
+        }
+    }
+
     public static void CallExportSV(WasmInstance inst, nint func, string text, bool required = false)
     {
         Debug.Assert(inst.ExecEnv != nint.Zero);

@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Reflection.Metadata;
 
 namespace Tinkwell.Firmwareless.WamrAotHost.Hosting;
 
@@ -28,8 +27,10 @@ sealed class WamrHost(ILogger<WamrHost> logger, IRegisterHostUnsafeNativeFunctio
         _logger.LogDebug("Starting...");
         foreach (var inst in _instances)
         {
+            // The parameter for which we pass zero is the "reason", currently we do not support
+            // suspending firmlets then it's always 0.
             _logger.LogTrace("Starting {Name}...", inst.Key);
-            Wamr.CallExportVV(inst.Value, inst.Value.OnStartFunc, required: true);
+            Wamr.CallExportIV(inst.Value, inst.Value.OnStartFunc, 0, required: true);
         }
     }
 
@@ -37,8 +38,10 @@ sealed class WamrHost(ILogger<WamrHost> logger, IRegisterHostUnsafeNativeFunctio
     {
         _logger.LogInformation("Terminating...");
 
+        // The parameter for which we pass zero is the "reason", currently we do not support
+        // suspending firmlets then it's always 0.
         foreach (var inst in _instances)
-            Wamr.CallExportVV(inst.Value, inst.Value.OnDisposeFunc);
+            Wamr.CallExportIV(inst.Value, inst.Value.OnDisposeFunc, 0);
     }
 
     public void Dispose()
