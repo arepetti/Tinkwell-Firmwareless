@@ -2,7 +2,7 @@ namespace Tinkwell.Firmwareless.WamrAotHost.Coordinator;
 
 static class ResourcesUsageMeter
 {
-    public static void Collect(IEnumerable<HostInfo> hosts)
+    public static async Task CollectAsync(IEnumerable<HostInfo> hosts)
     {
         Dictionary<string, CpuUsage> cpuStats = new();
         foreach (var hostInfo in hosts)
@@ -13,7 +13,7 @@ static class ResourcesUsageMeter
             cpuStats.Add(hostInfo.Id, new CpuUsage(DateTime.UtcNow, hostInfo.Process.TotalProcessorTime));
         }
 
-        Thread.Sleep(1000);
+        await Task.Delay(1000);
 
         foreach (var hostInfo in hosts)
         {

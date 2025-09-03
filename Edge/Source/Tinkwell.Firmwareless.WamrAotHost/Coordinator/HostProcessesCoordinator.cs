@@ -172,7 +172,7 @@ sealed class HostProcessesCoordinator(ILogger<HostProcessesCoordinator> logger, 
         });
     }
 
-    private void MonitorProcesses(object? state)
+    private async void MonitorProcesses(object? state)
     {
         try
         {
@@ -204,7 +204,7 @@ sealed class HostProcessesCoordinator(ILogger<HostProcessesCoordinator> logger, 
                 }
             }
 
-            ResourcesUsageMeter.Collect(_hosts.Values);
+            await ResourcesUsageMeter.CollectAsync(_hosts.Values);
             foreach (var host in _hosts.Values)
                 _logger.LogTrace("Host status - {HostInfo}", host.ToString());
 
