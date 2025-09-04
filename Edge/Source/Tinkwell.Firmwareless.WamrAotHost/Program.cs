@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
 using Tinkwell.Firmwareless.WamrAotHost;
@@ -17,7 +18,8 @@ var builder = Host.CreateDefaultBuilder(args);
 builder.ConfigureLogging(logging =>
 {
     logging.ClearProviders();
-    logging.AddSimpleConsole(configure => { configure.SingleLine = true; });
+    logging.AddConsole(o => o.FormatterName = nameof(ShortConsoleLogFormatter));
+    logging.AddConsoleFormatter<ShortConsoleLogFormatter, ConsoleFormatterOptions>();
 });
 
 builder.ConfigureServices((context, services) =>
@@ -53,7 +55,7 @@ using var host = builder.Build();
 await host.StartAsync();
 
 stopwatch.Stop();
-Console.WriteLine($"Execution time for {cli.Name} is: {stopwatch.ElapsedMilliseconds} ms");
+host.Services.GetRequiredService<ILogger<Program>>().LogInformation("Execution time for {Name} is: {Time} ms",
+    cli.Name, stopwatch.ElapsedMilliseconds);
 
 return 0;
-

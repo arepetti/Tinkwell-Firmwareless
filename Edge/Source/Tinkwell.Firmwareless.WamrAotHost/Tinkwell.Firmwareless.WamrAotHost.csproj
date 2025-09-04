@@ -35,8 +35,11 @@
         <None Update="appsettings.json">
           <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
-        <None Update="TestFirmwares\Firmware1\release.wasm">
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        <None Update="TestFirmwares\firmwares.txt">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="TestFirmwares\Vendor\Product\release.wasm">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
     </ItemGroup>
 

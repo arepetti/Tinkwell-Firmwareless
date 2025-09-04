@@ -29,13 +29,13 @@ sealed class HostService(IHost host, ILogger<HostService> logger, HostServiceOpt
         _wamrHost.InitializeModules();
         _wamrHost.Start();
 
-        _logger.LogDebug("Notifying coordinator through {PipeName}...", _options.PipeName);
+        _logger.LogTrace("Registering as ready to the coordinator...");
         await _ipcClient.StartClientAsync(_options.PipeName, _options.Id, this, stoppingToken);
 
-        _logger.LogInformation("Host {HostId} started", _options.Id);
+        _logger.LogDebug("Host {HostId} started", _options.Id);
 
         if (!_options.Transient)
-            stoppingToken.WaitHandle.WaitOne();
+            await stoppingToken.WaitForCancellationAsync();
 
         await _ipcClient.DisconnectAsync();
         _wamrHost.Stop();

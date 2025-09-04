@@ -69,8 +69,8 @@ sealed class WamrHost(ILogger<WamrHost> logger, IRegisterHostUnsafeNativeFunctio
         for (int index=0; index < paths.Length; ++index)
         {
             string path = paths[index];
-            var id = $"_{index}_{Path.GetFileNameWithoutExtension(path)}_";
-            _logger.LogInformation("Loading module {Index} of {Count}: {Path}", index, paths.Length, path);
+            var id = $"_{index + 1}_{Path.GetFileNameWithoutExtension(path)}_";
+            _logger.LogInformation("Loading module {Index} of {Count}: {Path}", index + 1, paths.Length, path);
             var inst = Wamr.LoadInstance(id, path);
             _instances[id] = inst;
         }

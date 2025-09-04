@@ -8,18 +8,20 @@ using Tinkwell.Firmwareless.WamrAotHost.Ipc.Requests;
 
 namespace Tinkwell.Firmwareless.WamrAotHost.Coordinator;
 
+sealed record FirmletEntry(string Id, string Path);
+
 sealed class HostProcessesCoordinator(ILogger<HostProcessesCoordinator> logger, Settings settings, IpcServer server, SystemResourcesUsageArbiter arbiter)
     : IDisposable
 {
     [DynamicDependency(nameof(RegisterClient), typeof(HostProcessesCoordinator))]
-    public void Start(string pipeName, IEnumerable<string> paths)
+    public void Start(string pipeName, IEnumerable<FirmletEntry> entries)
     {
         _pipeName = pipeName;
         _ = _server.StartAsync(_pipeName, this); // Fire and forget
 
         _hosts = new ConcurrentDictionary<string, HostInfo>(
-            paths
-                .Select(path => new HostInfo(IdHelpers.CreateId("firmlet", 8), path))
+            entries
+                .Select(entry => new HostInfo(entry.Id, IdHelpers.CreateId("firmlet", 12), entry.Path))
                 .ToDictionary(x => x.Id, x => x)
         );
 
@@ -29,8 +31,24 @@ sealed class HostProcessesCoordinator(ILogger<HostProcessesCoordinator> logger, 
         _monitorTimer = new Timer(
             callback: MonitorProcesses,
             state: null,
-            dueTime: TimeSpan.FromMilliseconds(_settings.CoordinatorMonitoringIntervalMs / 2),
+            dueTime: TimeSpan.FromMilliseconds(_settings.CoordinatorStartProcessTimeoutMs + 100),
             period: TimeSpan.FromMilliseconds(_settings.CoordinatorMonitoringIntervalMs));
+    }
+
+    public async Task StopAsync()
+    {
+        if (_hosts is null)
+            return;
+
+        _keepAlive = false;
+
+        foreach (var host in _hosts.Values.Where(x => x.Process is not null && !x.Process.HasExited))
+            GentlyTerminateProcess(host, "shutting down");
+
+        await Task.Delay(_settings.CoordinatorShutdownProcessTimeoutMs);
+
+        foreach (var host in _hosts.Values.Where(x => x.Process is not null && !x.Process.HasExited))
+            ForcefullyTerminateProcess(host);
     }
 
     [JsonRpcMethod(CoordinatorMethods.RegisterClient)]
@@ -38,9 +56,13 @@ sealed class HostProcessesCoordinator(ILogger<HostProcessesCoordinator> logger, 
     {
         Debug.Assert(_hosts is not null);
 
-        _logger.LogInformation("Host {HostId} is ready", request.ClientName);
         if (_hosts.TryGetValue(request.ClientName, out var host))
+        {
+            _logger.LogInformation("Host {HostId} is ready ({Time} ms)",
+                request.ClientName, (DateTime.UtcNow - host.StartTime).TotalMilliseconds);
+
             host.Ready = true;
+        }
     }
 
     public void Dispose()
@@ -52,6 +74,7 @@ sealed class HostProcessesCoordinator(ILogger<HostProcessesCoordinator> logger, 
     private readonly SystemResourcesUsageArbiter _arbiter = arbiter;
     private ConcurrentDictionary<string, HostInfo>? _hosts;
     private string? _pipeName;
+    private bool _keepAlive = true;
     private Timer? _monitorTimer;
 
     private void StartHostProcess(HostInfo hostInfo, string pipeName)
@@ -101,9 +124,10 @@ sealed class HostProcessesCoordinator(ILogger<HostProcessesCoordinator> logger, 
         if (hostInfo is null)
             return;
 
-        _logger.LogWarning("Host {HostId} (PID {PID}) exited with code: {ExitCode}. Restarting.", hostInfo.Id, process.Id, process.ExitCode);
+        _logger.LogWarning("Host {HostId} (PID {PID}) exited with code: {ExitCode}.", hostInfo.Id, process.Id, process.ExitCode);
 
-        await RestartProcessWithBackoffAsync(hostInfo);
+        if (_keepAlive)
+            await RestartProcessWithBackoffAsync(hostInfo);
     }
 
     private async Task RestartProcessWithBackoffAsync(HostInfo hostInfo)
@@ -130,7 +154,7 @@ sealed class HostProcessesCoordinator(ILogger<HostProcessesCoordinator> logger, 
 
         hostInfo.RestartTimestamps.Add(now);
         var recentRestartCount = hostInfo.RestartTimestamps.Count;
-        var delaySeconds = Math.Min(60, Math.Pow(2, recentRestartCount));
+        var delaySeconds = CalculateDelay();
 
         _logger.LogTrace("Waiting {Delay} seconds before restarting {HostId}", delaySeconds, hostInfo.Id);
         await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
@@ -142,6 +166,15 @@ sealed class HostProcessesCoordinator(ILogger<HostProcessesCoordinator> logger, 
             timeWindow);
 
         StartHostProcess(hostInfo, _pipeName);
+
+        double CalculateDelay()
+        {
+            const double cap = 60;
+            const double k = 0.9;
+            const double midpoint = 4;
+
+            return Math.Clamp(Math.Round(cap / (1 + Math.Exp(-k * (recentRestartCount - midpoint))), 1), 1, cap);
+        }
     }
 
     private static Process? SpawnWithArgs(string[] newArgs)
@@ -192,7 +225,7 @@ sealed class HostProcessesCoordinator(ILogger<HostProcessesCoordinator> logger, 
                 // It's been asked to quit but it's still here, kill it
                 if (host.Terminating)
                 {
-                    ForcefullyTerminateProcess(host, "not keen on goodbyes");
+                    ForcefullyTerminateProcess(host);
                     continue;
                 }
 
@@ -239,7 +272,7 @@ sealed class HostProcessesCoordinator(ILogger<HostProcessesCoordinator> logger, 
         _server.NotifyAsync(hostInfo.Id, HostMethods.Shutdown);
     }
 
-    private void ForcefullyTerminateProcess(HostInfo hostInfo, string reason)
+    private void ForcefullyTerminateProcess(HostInfo hostInfo, string reason = "not keen on goodbyes")
     {
         // Died already on its own?
         if (hostInfo.Process is null || hostInfo.Process.HasExited)

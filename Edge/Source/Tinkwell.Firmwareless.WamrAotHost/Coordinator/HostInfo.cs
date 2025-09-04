@@ -3,7 +3,7 @@ using System.Diagnostics;
 namespace Tinkwell.Firmwareless.WamrAotHost.Coordinator;
 
 [DebuggerDisplay("{Id}")]
-sealed record HostInfo(string Id, string Path)
+sealed record HostInfo(string ExternalReferenceId, string Id, string Path)
 {
     public bool Ready { get; set; }
     public bool Terminating { get; set; }

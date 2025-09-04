@@ -3,6 +3,7 @@
 public sealed class Settings
 {
     public int CoordinatorStartProcessTimeoutMs { get; set; } = 30_000;
+    public int CoordinatorShutdownProcessTimeoutMs { get; set; } = 1_000;
     public int CoordinatorMaxAllowedServerInstances { get; set; } = -1;
     public int CoordinatorMonitoringIntervalMs { get; set; } = 30_000;
     public int CoordinatorMaxHostRestartsPerHour { get; set; } = 10;

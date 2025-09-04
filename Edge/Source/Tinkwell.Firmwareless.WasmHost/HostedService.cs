@@ -18,6 +18,9 @@ sealed class HostedService(ILogger<HostedService> logger, IPackageDiscovery disc
             if (firmletEntry is not null)
                 _firmlets.Add(firmletEntry);
         }
+
+        await WriteFirmwareListAsync(cancellationToken);
+
         stopwatch.Stop();
         _logger.LogInformation("Discovered and unpacked {Count} firmlets in {ElapsedMilliseconds} ms", _firmlets.Count, stopwatch.ElapsedMilliseconds);
     }
@@ -33,14 +36,21 @@ sealed class HostedService(ILogger<HostedService> logger, IPackageDiscovery disc
     private readonly IPackageDiscovery _discovery = discovery;
     private readonly List<FirmwareEntry> _firmlets = new();
 
+    private static string GetCachePath()
+    {
+        var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Tinkwell.Firmwareless.Hub", "FirmwareCache");
+        if (!Directory.Exists(path))
+            Directory.CreateDirectory(path);
+
+        return path;
+    }
+
     private FirmwareEntry? UnpackFirmwarePackage(string path)
     {
-        var cachePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Tinkwell.Firmwareless.Hub", "FirmwareCache");
+        var cachePath = GetCachePath();
         try
         {
             var manifest = PackageManifestReader.Read(path);
-            if (!Directory.Exists(cachePath))
-                Directory.CreateDirectory(cachePath);
             
             var firmwareDirectoryName = Path.Combine(
                 cachePath,
@@ -70,5 +80,13 @@ sealed class HostedService(ILogger<HostedService> logger, IPackageDiscovery disc
 
         static string Sanitize(string text)
             => text.Replace('/', '_').Replace('\\', '_'); // A bit paranoic but it's an "external" input...
+    }
+
+    private Task WriteFirmwareListAsync(CancellationToken cancellationToken)
+    {
+        var list = new List<string>();
+        foreach (var firmlet in _firmlets)
+            list.Add($"{firmlet.Manifest.FirmwareId}=\"{firmlet.Path}\"");
+        return File.WriteAllLinesAsync(Path.Combine(GetCachePath(), "firmwares.txt"), list, cancellationToken);
     }
 }
