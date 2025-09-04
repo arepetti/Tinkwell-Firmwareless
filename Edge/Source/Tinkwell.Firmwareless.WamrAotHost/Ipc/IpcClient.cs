@@ -8,6 +8,8 @@ namespace Tinkwell.Firmwareless.WamrAotHost.Ipc;
 
 sealed class IpcClient(ILogger<IpcClient> logger, Settings settings) : IpcBase, IDisposable
 {
+    public string HostId => _id ?? "";
+
     public Task StartClientAsync(string pipeName, string id, object clientCallbacks, CancellationToken cancellationToken)
     {
         _pipeName = pipeName;
@@ -16,13 +18,19 @@ sealed class IpcClient(ILogger<IpcClient> logger, Settings settings) : IpcBase, 
         return StartClientImplAsync(cancellationToken);
     }
 
+    public Task NotifyAsync(string notificationName, object argument)
+    {
+        Debug.Assert(_rpc is not null);
+        return _rpc!.NotifyAsync(notificationName, argument);
+    }
+
     public async Task DisconnectAsync()
     {
         _disconnecting = true;
-        rpc?.Dispose();
+        _rpc?.Dispose();
 
-        if (pipeClient is not null)
-            await pipeClient.DisposeAsync();
+        if (_pipeClient is not null)
+            await _pipeClient.DisposeAsync();
     }
 
     void IDisposable.Dispose()
@@ -33,8 +41,8 @@ sealed class IpcClient(ILogger<IpcClient> logger, Settings settings) : IpcBase, 
 
     private readonly ILogger<IpcClient> _logger = logger;
     private readonly Settings _settings = settings;
-    private JsonRpc? rpc;
-    private NamedPipeClientStream? pipeClient;
+    private JsonRpc? _rpc;
+    private NamedPipeClientStream? _pipeClient;
     private string? _pipeName;
     private string? _id;
     private object? _clientCallbacks;
@@ -55,15 +63,15 @@ sealed class IpcClient(ILogger<IpcClient> logger, Settings settings) : IpcBase, 
                 _logger.LogDebug("Client: connecting to {PipeName} (attempt {Attempt} of {MaxAttempts})",
                     _pipeName, i + 1, _settings.HostMaxConnectionAttempts);
 
-                pipeClient = new NamedPipeClientStream(".", _pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
-                pipeClient.Connect(_settings.HostConnectionTimeout);
+                _pipeClient = new NamedPipeClientStream(".", _pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+                _pipeClient.Connect(_settings.HostConnectionTimeout);
 
-                rpc = CreateJsonRpc(pipeClient, _clientCallbacks);
-                rpc.Disconnected += OnDisconnected;
-                rpc.StartListening();
+                _rpc = CreateJsonRpc(_pipeClient, _clientCallbacks);
+                _rpc.Disconnected += OnDisconnected;
+                _rpc.StartListening();
 
                 _logger.LogDebug("Registering the host {HostId}", _id);
-                await rpc.NotifyAsync(CoordinatorMethods.RegisterClient, new RegisterClientRequest { ClientName = _id });
+                await _rpc.NotifyAsync(CoordinatorMethods.RegisterClient, new RegisterClientRequest { ClientName = _id });
                 return;
             }
             catch (IOException e)
@@ -82,8 +90,8 @@ sealed class IpcClient(ILogger<IpcClient> logger, Settings settings) : IpcBase, 
             return;
 
         _logger.LogWarning("Host {HostId} disconnected from the server, reconnecting", _id);
-        rpc?.Dispose();
-        pipeClient?.Dispose();
+        _rpc?.Dispose();
+        _pipeClient?.Dispose();
         _ = StartClientImplAsync(CancellationToken.None); // Fire and forget reconnection
     }
 
@@ -95,8 +103,8 @@ sealed class IpcClient(ILogger<IpcClient> logger, Settings settings) : IpcBase, 
         if (disposing)
         {
             _disconnecting = true;
-            rpc?.Dispose();
-            pipeClient?.Dispose();
+            _rpc?.Dispose();
+            _pipeClient?.Dispose();
         }
 
         _disposed = true;

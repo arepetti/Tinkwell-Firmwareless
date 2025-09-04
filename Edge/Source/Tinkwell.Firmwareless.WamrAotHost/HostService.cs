@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using StreamJsonRpc;
-using System.Diagnostics.CodeAnalysis;
+using Tinkwell.Firmwareless.WamrAotHost.Coordinator.Mqtt;
 using Tinkwell.Firmwareless.WamrAotHost.Hosting;
 using Tinkwell.Firmwareless.WamrAotHost.Ipc;
 using Tinkwell.Firmwareless.WamrAotHost.Ipc.Requests;
@@ -19,7 +19,13 @@ sealed class HostService(IHost host, ILogger<HostService> logger, HostServiceOpt
         await _host.StopAsync();
     }
 
-    [DynamicDependency(nameof(Shutdown), typeof(HostService))]
+    [JsonRpcMethod(HostMethods.ReceiveMqttMessage)]
+    public void ReceiveMqttMessage(MqttMessage message)
+    {
+        _logger.LogTrace("Host {HostId} received MQTT message {Topic}", _ipcClient.HostId, message.Topic);
+        _wamrHost.Notify(message.Topic, message.Payload);
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Wamr host {Id}, channel {PipeName}, modules in {Path}.", _options.Id, _options.PipeName, _options.Path);

@@ -44,6 +44,12 @@ sealed class WamrHost(ILogger<WamrHost> logger, IRegisterHostUnsafeNativeFunctio
             Wamr.CallExportIV(inst.Value, inst.Value.OnDisposeFunc, 0);
     }
 
+    public void Notify(string topic, string payload)
+    {
+        foreach (var inst in _instances)
+            Wamr.CallExportSSV(inst.Value, inst.Value.OnMessageFunc, topic, payload);
+    }
+
     public void Dispose()
     {
         Dispose(disposing: true);

@@ -29,6 +29,15 @@ sealed class IpcServer(ILogger<IpcServer> logger, Settings settings) : IpcBase, 
         }
     }
 
+    public Task NotifyAsync(string hostId, string notificationName, object argument)
+    {
+        if (_clients.TryGetValue(hostId, out var rpc))
+            return rpc.NotifyAsync(notificationName, argument);
+
+        _logger.LogWarning("Cannot find host {HostId} to send notification '{Notification}'", hostId, notificationName);
+        return Task.CompletedTask;
+    }
+
     public Task NotifyAsync(string hostId, string notificationName)
     {
         if (_clients.TryGetValue(hostId, out var rpc))

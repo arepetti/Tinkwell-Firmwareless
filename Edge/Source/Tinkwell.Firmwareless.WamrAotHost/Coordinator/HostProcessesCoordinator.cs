@@ -1,8 +1,6 @@
 using Microsoft.Extensions.Logging;
-using StreamJsonRpc;
-using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
+using Tinkwell.Firmwareless.WamrAotHost.Coordinator.Monitoring;
 using Tinkwell.Firmwareless.WamrAotHost.Ipc;
 using Tinkwell.Firmwareless.WamrAotHost.Ipc.Requests;
 
@@ -10,22 +8,23 @@ namespace Tinkwell.Firmwareless.WamrAotHost.Coordinator;
 
 sealed record FirmletEntry(string Id, string Path);
 
-sealed class HostProcessesCoordinator(ILogger<HostProcessesCoordinator> logger, Settings settings, IpcServer server, SystemResourcesUsageArbiter arbiter)
-    : IDisposable
+sealed class HostProcessesCoordinator(
+    ILogger<HostProcessesCoordinator> logger,
+    Settings settings,
+    IpcServer server,
+    FirmletsRepository repository,
+    CoordinatorRpc rpc,
+    SystemResourcesUsageArbiter arbiter
+) : IDisposable
 {
-    [DynamicDependency(nameof(RegisterClient), typeof(HostProcessesCoordinator))]
     public void Start(string pipeName, IEnumerable<FirmletEntry> entries)
     {
         _pipeName = pipeName;
-        _ = _server.StartAsync(_pipeName, this); // Fire and forget
+        _ = _server.StartAsync(_pipeName, _rpc); // Fire and forget
 
-        _hosts = new ConcurrentDictionary<string, HostInfo>(
-            entries
-                .Select(entry => new HostInfo(entry.Id, IdHelpers.CreateId("firmlet", 12), entry.Path))
-                .ToDictionary(x => x.Id, x => x)
-        );
+        _repository.Add(entries);
 
-        foreach (var hostInfo in _hosts.Values)
+        foreach (var hostInfo in _repository.Hosts)
             StartHostProcess(hostInfo, _pipeName);
 
         _monitorTimer = new Timer(
@@ -37,32 +36,15 @@ sealed class HostProcessesCoordinator(ILogger<HostProcessesCoordinator> logger, 
 
     public async Task StopAsync()
     {
-        if (_hosts is null)
-            return;
-
         _keepAlive = false;
 
-        foreach (var host in _hosts.Values.Where(x => x.Process is not null && !x.Process.HasExited))
+        foreach (var host in _repository.ActiveHosts)
             GentlyTerminateProcess(host, "shutting down");
 
         await Task.Delay(_settings.CoordinatorShutdownProcessTimeoutMs);
 
-        foreach (var host in _hosts.Values.Where(x => x.Process is not null && !x.Process.HasExited))
+        foreach (var host in _repository.ActiveHosts)
             ForcefullyTerminateProcess(host);
-    }
-
-    [JsonRpcMethod(CoordinatorMethods.RegisterClient)]
-    public void RegisterClient(RegisterClientRequest request)
-    {
-        Debug.Assert(_hosts is not null);
-
-        if (_hosts.TryGetValue(request.ClientName, out var host))
-        {
-            _logger.LogInformation("Host {HostId} is ready ({Time} ms)",
-                request.ClientName, (DateTime.UtcNow - host.StartTime).TotalMilliseconds);
-
-            host.Ready = true;
-        }
     }
 
     public void Dispose()
@@ -71,8 +53,9 @@ sealed class HostProcessesCoordinator(ILogger<HostProcessesCoordinator> logger, 
     private readonly ILogger<HostProcessesCoordinator> _logger = logger;
     private readonly Settings _settings = settings;
     private readonly IpcServer _server = server;
+    private readonly FirmletsRepository _repository = repository;
+    private readonly CoordinatorRpc _rpc = rpc;
     private readonly SystemResourcesUsageArbiter _arbiter = arbiter;
-    private ConcurrentDictionary<string, HostInfo>? _hosts;
     private string? _pipeName;
     private bool _keepAlive = true;
     private Timer? _monitorTimer;
@@ -120,7 +103,7 @@ sealed class HostProcessesCoordinator(ILogger<HostProcessesCoordinator> logger, 
     {
         var process = (Process)sender!;
 
-        var hostInfo = _hosts?.Values.FirstOrDefault(h => h.Process?.Id == process.Id);
+        var hostInfo = _repository.GetByProcessId(process.Id);
         if (hostInfo is null)
             return;
 
@@ -209,19 +192,16 @@ sealed class HostProcessesCoordinator(ILogger<HostProcessesCoordinator> logger, 
     {
         try
         {
-            if (_hosts is null || _hosts.IsEmpty)
+            if (_repository.IsEmpty)
                 return;
 
-            _logger.LogTrace("Running periodic check on {Count} host processes.", _hosts.Count);
+            _logger.LogTrace("Running periodic check on {Count} host processes.", _repository.Count);
 
             var now = DateTime.UtcNow;
             var startProcessTimeout = TimeSpan.FromMilliseconds(_settings.CoordinatorStartProcessTimeoutMs);
 
-            foreach (var host in _hosts.Values)
+            foreach (var host in _repository.ActiveHosts)
             {
-                if (host.Process is null || host.Process.HasExited)
-                    continue;
-
                 // It's been asked to quit but it's still here, kill it
                 if (host.Terminating)
                 {
@@ -236,12 +216,12 @@ sealed class HostProcessesCoordinator(ILogger<HostProcessesCoordinator> logger, 
                     continue;
                 }
             }
-
-            await ResourcesUsageMeter.CollectAsync(_hosts.Values);
-            foreach (var host in _hosts.Values)
+            
+            await ResourcesUsageMeter.CollectAsync(_repository.Hosts);
+            foreach (var host in _repository.Hosts)
                 _logger.LogTrace("Host status - {HostInfo}", host.ToString());
 
-            foreach (var decision in _arbiter.Assess(_hosts.Values))
+            foreach (var decision in _arbiter.Assess(_repository.Hosts))
             {
                 switch (decision.Decision)
                 {

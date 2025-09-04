@@ -45,7 +45,6 @@ RUN dotnet publish "./Tinkwell.Firmwareless.WamrAotHost.csproj" \
         -c $BUILD_CONFIGURATION \
         -o /app/publish \
         -p:UseAppHost=true \
-        -p:PublishTrimmed=true \
         --self-contained true && \
     cp /usr/local/wamr/lib/libiwasm.so /app/publish/
 

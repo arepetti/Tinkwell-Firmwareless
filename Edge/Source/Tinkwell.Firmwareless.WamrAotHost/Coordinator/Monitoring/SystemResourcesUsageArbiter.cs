@@ -1,4 +1,4 @@
-namespace Tinkwell.Firmwareless.WamrAotHost.Coordinator;
+namespace Tinkwell.Firmwareless.WamrAotHost.Coordinator.Monitoring;
 
 sealed class SystemResourcesUsageArbiter(Settings settings)
 {

@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace Tinkwell.Firmwareless.WamrAotHost.Coordinator;
+namespace Tinkwell.Firmwareless.WamrAotHost.Coordinator.Monitoring;
 
 // This is going to be removed when Microsoft.Extensions.Diagnostics.ResourceMonitoring will support
 // all the metrics we will need (total memory, system memory usage %, system CPU usage %). We're going

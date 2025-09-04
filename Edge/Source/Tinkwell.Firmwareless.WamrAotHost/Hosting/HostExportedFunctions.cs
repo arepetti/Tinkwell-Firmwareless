@@ -1,8 +1,11 @@
 ﻿using Microsoft.Extensions.Logging;
+using Tinkwell.Firmwareless.WamrAotHost.Coordinator.Mqtt;
+using Tinkwell.Firmwareless.WamrAotHost.Ipc;
+using Tinkwell.Firmwareless.WamrAotHost.Ipc.Requests;
 
 namespace Tinkwell.Firmwareless.WamrAotHost.Hosting;
 
-sealed class HostExportedFunctions(ILogger<HostExportedFunctions> logger) : IHostExportedFunctions
+sealed class HostExportedFunctions(ILogger<HostExportedFunctions> logger, IpcClient ipcClient) : IHostExportedFunctions
 {
     public void Abort(string message, string fileName, int lineNumber, int columnNumber)
     {
@@ -34,8 +37,9 @@ sealed class HostExportedFunctions(ILogger<HostExportedFunctions> logger) : IHos
 
     public void PublishMqttMessage(string topic, string payload)
     {
-        _logger.LogTrace("Publishing MQTT message in {Topic}: {Payload}", topic, payload);
+        _ipcClient.NotifyAsync(CoordinatorMethods.PublishMqttMessage, new MqttMessage(_ipcClient.HostId, topic, payload));
     }
 
     private readonly ILogger<HostExportedFunctions> _logger = logger;
+    private readonly IpcClient _ipcClient = ipcClient;
 }

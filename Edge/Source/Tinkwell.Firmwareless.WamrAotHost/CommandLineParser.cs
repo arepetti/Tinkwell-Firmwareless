@@ -47,7 +47,10 @@ sealed class CommandLineParser
     {
         return new(
             Path: GetOption("path"),
-            Parent: GetOption("parent"),
+            MqttBrokerAddress: GetOption("mqtt-broker-address"),
+            MqttBrokerPort: ushort.Parse(GetOption("mqtt-broker-port")),
+            MqttClientId: GetOption("mqtt-client-id"),
+            MqttTopicFilter: GetOption("mqtt-topic-filter", false, "tinkwell/#"),
             Transient: IsPresent("transient")
         );
     }
@@ -64,7 +67,7 @@ sealed class CommandLineParser
 
     private readonly IReadOnlyDictionary<string, string?> _options;
 
-    private string GetOption(string optionName, bool required = true)
+    private string GetOption(string optionName, bool required = true, string defaultIfMissing = "")
     {
         var key = $"--{optionName}";
         if (_options.TryGetValue(key, out var value) && value is not null)
@@ -76,7 +79,7 @@ sealed class CommandLineParser
             Environment.Exit(1);
         }
 
-        return "";
+        return defaultIfMissing;
     }
 
     private bool IsPresent(string optionName)
@@ -84,7 +87,7 @@ sealed class CommandLineParser
 
     private static Dictionary<string, string?> ParseOptions(string[] args)
     {
-        var options = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        var options = new Dictionary<string, string?>(StringComparer.Ordinal);
         foreach (var arg in args)
         {
             if (!arg.StartsWith("--"))

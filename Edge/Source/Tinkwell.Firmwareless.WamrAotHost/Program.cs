@@ -3,14 +3,12 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using Microsoft.Extensions.Options;
-using System.Diagnostics;
 using Tinkwell.Firmwareless.WamrAotHost;
 using Tinkwell.Firmwareless.WamrAotHost.Coordinator;
+using Tinkwell.Firmwareless.WamrAotHost.Coordinator.Monitoring;
+using Tinkwell.Firmwareless.WamrAotHost.Coordinator.Mqtt;
 using Tinkwell.Firmwareless.WamrAotHost.Hosting;
 using Tinkwell.Firmwareless.WamrAotHost.Ipc;
-
-var stopwatch = new Stopwatch();
-stopwatch.Start();
 
 var cli = new CommandLineParser(args);
 var builder = Host.CreateDefaultBuilder(args);
@@ -18,7 +16,7 @@ var builder = Host.CreateDefaultBuilder(args);
 builder.ConfigureLogging(logging =>
 {
     logging.ClearProviders();
-    logging.AddConsole(o => o.FormatterName = nameof(ShortConsoleLogFormatter));
+    logging.AddConsole(options => options.FormatterName = nameof(ShortConsoleLogFormatter));
     logging.AddConsoleFormatter<ShortConsoleLogFormatter, ConsoleFormatterOptions>();
 });
 
@@ -43,9 +41,13 @@ builder.ConfigureServices((context, services) =>
     else
     {
         services
+            .AddSingleton<MqttQueue, MqttQueue>()
+            .AddHostedService<MqttMessagesProcessingService>()
             .AddSingleton(cli.GetCoordinatorServiceOptions())
             .AddSingleton<IpcServer>()
             .AddSingleton<SystemResourcesUsageArbiter>()
+            .AddSingleton<FirmletsRepository>()
+            .AddSingleton<CoordinatorRpc>()
             .AddSingleton<HostProcessesCoordinator>()
             .AddHostedService<CoordinatorService>();
     }
@@ -54,8 +56,3 @@ builder.ConfigureServices((context, services) =>
 using var host = builder.Build();
 await host.StartAsync();
 
-stopwatch.Stop();
-host.Services.GetRequiredService<ILogger<Program>>().LogInformation("Execution time for {Name} is: {Time} ms",
-    cli.Name, stopwatch.ElapsedMilliseconds);
-
-return 0;

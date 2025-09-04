@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Tinkwell.Firmwareless.WamrAotHost.Coordinator.Monitoring;
 
 namespace Tinkwell.Firmwareless.WamrAotHost.Coordinator;
 
@@ -21,5 +22,14 @@ sealed record HostInfo(string ExternalReferenceId, string Id, string Path)
             UsageData.CpuUsagePercentage.Current,
             UsageData.MemoryUsagePercentage.Current
         );
+    }
+}
+
+sealed record HostInfoResourceUsageData(FixedSizeValueList CpuUsagePercentage, FixedSizeValueList MemoryUsagePercentage)
+{
+    public void Clear()
+    {
+        CpuUsagePercentage.Clear();
+        MemoryUsagePercentage.Clear();
     }
 }

@@ -5,6 +5,6 @@ interface IWamrHost
     void Load(string[] paths);
     void InitializeModules();
     void Start();
-
     void Stop();
+    void Notify(string topic, string payload);
 }

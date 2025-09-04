@@ -93,33 +93,52 @@ static partial class Wamr
     }
 
 
-    //public static void CallExportPIPIV(WasmInstance inst, nint func, nint a, int b, nint c, int d)
-    //{
-    //    if (func == IntPtr.Zero)
-    //        return;
 
-    //    int argc = 2;
-    //    int size = nint.Size + sizeof(int);
-    //    nint argv = Marshal.Alloc(size);
-    //    try
-    //    {
-    //        unsafe
-    //        {
-    //            byte* p = (byte*)argv.ToPointer();
-    //            *(nint*)p = a;
-    //            *(int*)(p + sizeof(nint)) = b;
-    //            *(nint*)(p + sizeof(nint) + sizeof(int)) = c;
-    //            *(int*)(p + sizeof(nint) + sizeof(int) + sizeof(nint)) = d;
-    //        }
+    public static void CallExportSSV(WasmInstance inst, nint func, string text1, string text2, bool required = false)
+    {
+        Debug.Assert(inst.ExecEnv != nint.Zero);
 
-    //        if (!Libiwasm.wasm_runtime_call_wasm(inst.ExecEnv, func, (uint)argc, argv))
-    //            Console.WriteLine("[HOST] wasm call failed (check your export signature and host build).");
-    //    }
-    //    finally
-    //    {
-    //        Marshal.FreeHGlobal(argv);
-    //    }
-    //}
+        if (IsCallable(inst, func, required) == false)
+            return;
+
+        // TODO: REUSE THIS MEMORY!!! This function is probably called MANY many times: keep a buffer
+        // around instead of allocating/freeing each time.
+        var (ptr1, len1) = WasmMemory.CopyStringIntoModuleMemoryAsUtf8(inst, text1);
+        var (ptr2, len2) = WasmMemory.CopyStringIntoModuleMemoryAsUtf8(inst, text1);
+        int ptrSize = inst.Wasm64 ? nint.Size : sizeof(int);
+
+        int argc = 4;
+        int size = 2 * (ptrSize + sizeof(int));
+        nint argv = Marshal.AllocHGlobal(size);
+        try
+        {
+            unsafe
+            {
+                byte* p = (byte*)argv.ToPointer();
+
+                if (inst.Wasm64)
+                    *(nint*)p = ptr1;
+                else
+                    *(int*)p = (int)ptr1;
+                *(int*)(p + ptrSize) = len1;
+
+                if (inst.Wasm64)
+                    *(nint*)(p + ptrSize + sizeof(int)) = ptr2;
+                else
+                    *(int*)(p + ptrSize + sizeof(int)) = (int)ptr2;
+                *(int*)(p + ptrSize + sizeof(int) + ptrSize) = len2;
+            }
+
+            if (!Libiwasm.wasm_runtime_call_wasm(inst.ExecEnv, func, (uint)argc, argv))
+                throw new HostException($"Error calling (pipi)v WASM function: {GetLastError(inst)}");
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(argv);
+            WasmMemory.Free(inst, ptr1);
+            WasmMemory.Free(inst, ptr2);
+        }
+    }
 
     private static char TypeChar(Type t)
         => t switch

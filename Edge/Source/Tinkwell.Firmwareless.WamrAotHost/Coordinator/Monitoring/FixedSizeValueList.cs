@@ -1,4 +1,4 @@
-namespace Tinkwell.Firmwareless.WamrAotHost.Coordinator;
+namespace Tinkwell.Firmwareless.WamrAotHost.Coordinator.Monitoring;
 
 sealed class FixedSizeValueList
 {
@@ -27,7 +27,7 @@ sealed class FixedSizeValueList
         if (_values.Count == 0)
             return null;
 
-        double a = alpha is null ? (2.0 / (_values.Count + 1)) : alpha.Value;
+        double a = alpha is null ? 2.0 / (_values.Count + 1) : alpha.Value;
         double result = _values[0];
         for (int i=1; i < _values.Count; ++i)
             result = (1 - a) * result + a * _values[i];
