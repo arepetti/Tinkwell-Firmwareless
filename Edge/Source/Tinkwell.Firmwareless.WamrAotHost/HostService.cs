@@ -35,7 +35,7 @@ sealed class HostService(IHost host, ILogger<HostService> logger, HostServiceOpt
         _logger.LogDebug("Host {HostId} started", _options.Id);
 
         if (!_options.Transient)
-            await stoppingToken.WaitForCancellationAsync();
+            stoppingToken.WaitHandle.WaitOne();
 
         await _ipcClient.DisconnectAsync();
         _wamrHost.Stop();

@@ -8,7 +8,7 @@ sealed record CoordinatorServiceOptions(string Path, string Parent, bool Transie
 
 sealed class CoordinatorService(ILogger<CoordinatorService> logger, HostProcessesCoordinator coordinator, CoordinatorServiceOptions options) : BackgroundService
 {
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         string pipeName = IdHelpers.CreateId("tinkwell", 8);
         _logger.LogInformation("Parent URL: {Parent}", _options.Parent);
@@ -19,7 +19,9 @@ sealed class CoordinatorService(ILogger<CoordinatorService> logger, HostProcesse
         _coordinator.Start(pipeName, FindFirmlets());
 
         if (!_options.Transient)
-            await stoppingToken.WaitForCancellationAsync();
+            stoppingToken.WaitHandle.WaitOne();
+
+        return Task.CompletedTask;
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
