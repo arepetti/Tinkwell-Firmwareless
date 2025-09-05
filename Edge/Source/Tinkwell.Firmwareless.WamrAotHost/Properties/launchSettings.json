@@ -2,7 +2,7 @@
   "profiles": {
     "Container (Dockerfile)": {
       "commandName": "Docker",
-      "commandLineArgs": "coordinator --path=./TestFirmwares --mqtt-broker-address=localhost --mqtt-broker-port=1883 --mqtt-client-id=firmlets-container"
+      "commandLineArgs": "coordinator --path=./TestFirmwares --mqtt-broker-address=host.docker.internal --mqtt-broker-port=1883 --mqtt-client-id=firmlets-container"
     }
   }
 }

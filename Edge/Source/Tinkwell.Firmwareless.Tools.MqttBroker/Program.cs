@@ -18,5 +18,4 @@ builder.ConfigureServices((context, services) =>
 
 using var host = builder.Build();
 await host.StartAsync();
-
-return 0;
+await host.WaitForShutdownAsync();

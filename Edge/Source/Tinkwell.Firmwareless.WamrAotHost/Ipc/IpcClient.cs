@@ -21,7 +21,8 @@ sealed class IpcClient(ILogger<IpcClient> logger, Settings settings) : IpcBase, 
     public Task NotifyAsync(string notificationName, object argument)
     {
         Debug.Assert(_rpc is not null);
-        return _rpc!.NotifyAsync(notificationName, argument);
+        _logger.LogTrace("Host {HostId} sending notification {Notification}...", _id, notificationName);
+        return _rpc.NotifyAsync(notificationName, argument);
     }
 
     public async Task DisconnectAsync()

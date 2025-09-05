@@ -20,15 +20,20 @@ sealed class MqttMessagesProcessingService(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogDebug("MQTT message processing service starting...");
-        await CreateMqttClientAndConnectAsync(stoppingToken);
+        if (string.IsNullOrWhiteSpace(_options.MqttBrokerAddress))
+        {
+            _logger.LogWarning("MQTT broker address not specified, MQTT won't be available.");
+        }
+        else
+        {
+            _logger.LogDebug("MQTT message processing service starting...");
+            await CreateMqttClientAndConnectAsync(stoppingToken);
+        }
 
         _logger.LogDebug("MQTT message processing service started");
-
         while (!stoppingToken.IsCancellationRequested)
         {
             var message = await _queue.DequeueAsync(stoppingToken);
-
             try
             {
                 if (message.Direction == MqttMessgeDirection.Incoming)
@@ -104,6 +109,8 @@ sealed class MqttMessagesProcessingService(
         if (_mqttClient is null)
             throw new InvalidOperationException("MQTT client is not initialized. Please start the bridge first.");
 
+        _logger.LogTrace("Publishing MQTT message {Topic}...", topic);
+
         var message = new MqttApplicationMessageBuilder()
             .WithTopic(topic)
             .WithPayload(payload)
@@ -111,19 +118,52 @@ sealed class MqttMessagesProcessingService(
             .Build();
 
         // TODO: add retry logic here!
-        _logger.LogTrace("Publishing MQTT message on topic {Topic}", topic);
         var result = await _mqttClient.PublishAsync(message, cancellationToken);
 
         switch (result.ReasonCode)
         {
             case MqttClientPublishReasonCode.Success:
+                _logger.LogTrace("Successfully sent MQTT message {Topic}...", topic);
                 break;
             case MqttClientPublishReasonCode.NoMatchingSubscribers:
-                _logger.LogWarning("MQTT message with topic {Topic} had no receiver", topic);
+                _logger.LogTrace("MQTT message with topic {Topic} had no receiver", topic);
                 break;
             default:
                 _logger.LogError("MQTT message delivery error {ErrorCode}: {ErrorMessage}", result.ReasonCode, result.ReasonString);
                 break;
+        }
+    }
+
+    private async Task ConnectAsync(CancellationToken cancellationToken)
+    {
+        Debug.Assert(_mqttClient is not null);
+        Debug.Assert(_clientOptions is not null);
+
+        for (int i = 0; i < _settings.MqttMaxRetries; ++i)
+        {
+            if (cancellationToken.IsCancellationRequested)
+                return;
+
+            _logger.LogDebug("Connecting to MQTT broker {Address}:{Port} (attempt {Attempt}/{TotalAttempts})...",
+                _options.MqttBrokerAddress, _options.MqttBrokerPort, i + 1, _settings.MqttMaxRetries);
+
+            try
+            {
+                await _mqttClient.ConnectAsync(_clientOptions, cancellationToken);
+                return;
+            }
+            catch (Exception e)
+            {
+                if (i < _settings.MqttMaxRetries - 1)
+                {
+                    _logger.LogWarning("Failed to connect to MQTT broker ({Reason)}. Retrying in {Delay}ms...",
+                        e.Message, _settings.MqttDelayBetweenRetriesMs);
+
+                    await Task.Delay(_settings.MqttDelayBetweenRetriesMs, cancellationToken);
+                }
+                else
+                    _logger.LogError(e, "Failed to connect to MQTT broker: {Reason}", e.Message);
+            }
         }
     }
 
@@ -138,6 +178,7 @@ sealed class MqttMessagesProcessingService(
             topicFilter = new MqttTopicFilterBuilder()
                 .WithTopic(_options.MqttTopicFilter)
                 .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce)
+                .WithNoLocal(true)
                 .Build();
         }
 
@@ -174,39 +215,6 @@ sealed class MqttMessagesProcessingService(
         }
     }
 
-    private async Task ConnectAsync(CancellationToken cancellationToken)
-    {
-        Debug.Assert(_mqttClient is not null);
-        Debug.Assert(_clientOptions is not null);
-
-        for (int i = 0; i < _settings.MqttMaxRetries; ++i)
-        {
-            if (cancellationToken.IsCancellationRequested)
-                return;
-
-            _logger.LogDebug("Connecting to MQTT broker {Address}:{Port} (attempt {Attempt}/{TotalAttempts})...",
-                _options.MqttBrokerAddress, _options.MqttBrokerPort, i + 1, _settings.MqttMaxRetries);
-
-            try
-            {
-                await _mqttClient.ConnectAsync(_clientOptions, cancellationToken);
-                return;
-            }
-            catch (Exception e)
-            {
-                if (i < _settings.MqttMaxRetries - 1)
-                {
-                    _logger.LogWarning("Failed to connect to MQTT broker ({Reason)}. Retrying in {Delay}ms...",
-                        e.Message, _settings.MqttMaxRetries);
-
-                    await Task.Delay(_settings.MqttMaxRetries, cancellationToken);
-                }
-                else
-                    _logger.LogError(e, "Failed to connect to MQTT broker: {Reason}", e.Message);
-            }
-        }
-    }
-
     private Task HandleApplicationMessageReceivedAsync(MqttApplicationMessageReceivedEventArgs arg)
     {
         var topic = arg.ApplicationMessage.Topic;
@@ -219,8 +227,16 @@ sealed class MqttMessagesProcessingService(
             return Task.CompletedTask;
         }
 
-        var payload = arg.ApplicationMessage.ConvertPayloadToString();
-        _queue.EnqueueIncomingMessage(new MqttMessage(parsedTopic.Value.HostId, parsedTopic.Value.Topic, payload));
+        if (_repository.TryGetByExternalReferenceId(parsedTopic.Value.HostExternalReferenceId, out var host))
+        {
+            var payload = arg.ApplicationMessage.ConvertPayloadToString();
+            _queue.EnqueueIncomingMessage(new MqttMessage(host.Id, parsedTopic.Value.Topic, payload));
+        }
+        else
+        {
+            _logger.LogError("MQTT message {Topic} targets an unknown host", topic);
+        }
+
         return Task.CompletedTask;
     }
 }

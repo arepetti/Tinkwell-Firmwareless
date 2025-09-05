@@ -103,8 +103,7 @@ sealed class HostProcessesCoordinator(
     {
         var process = (Process)sender!;
 
-        var hostInfo = _repository.GetByProcessId(process.Id);
-        if (hostInfo is null)
+        if (_repository.TryGetByProcessId(process.Id, out var hostInfo) == false)
             return;
 
         _logger.LogWarning("Host {HostId} (PID {PID}) exited with code: {ExitCode}.", hostInfo.Id, process.Id, process.ExitCode);

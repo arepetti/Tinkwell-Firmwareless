@@ -26,8 +26,17 @@ sealed class FirmletsRepository
     public bool TryGetByHostId(string id, [NotNullWhen(true)] out HostInfo host)
         => _hosts.TryGetValue(id, out host!);
 
-    public HostInfo? GetByProcessId(int pid) // Spell all the conditions or .Id will throw
-        => _hosts?.Values.FirstOrDefault(x => x.Process is not null && !x.Process.HasExited && x.Process?.Id == pid);
+    public bool TryGetByProcessId(int pid, [NotNullWhen(true)] out HostInfo host) 
+    {
+        host = _hosts?.Values.FirstOrDefault(x => x.Process is not null && !x.Process.HasExited && x.Process?.Id == pid)!;
+        return host is not null;
+    }
+
+    public bool TryGetByExternalReferenceId(string externalReferenceId, [NotNullWhen(true)] out HostInfo host)
+    {
+        host = _hosts?.Values.FirstOrDefault(x => x.ExternalReferenceId == externalReferenceId)!;
+        return host is not null;
+    }
 
     private ConcurrentDictionary<string, HostInfo> _hosts = new();
 }

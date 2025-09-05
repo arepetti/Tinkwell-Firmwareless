@@ -8,20 +8,20 @@ sealed record CoordinatorServiceOptions(string Path, string MqttBrokerAddress, i
 
 sealed class CoordinatorService(ILogger<CoordinatorService> logger, HostProcessesCoordinator coordinator, CoordinatorServiceOptions options) : BackgroundService
 {
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         string pipeName = IdHelpers.CreateId("tinkwell", 8);
         _logger.LogInformation("MQTT broker: {Address}:{Port}", _options.MqttBrokerAddress, _options.MqttBrokerPort);
         _logger.LogInformation("Firmlets root path: {Path}", _options.Path);
         _logger.LogInformation("Coordinator pipe name: {PipeName}", pipeName);
 
-        _logger.LogInformation("Starting firmlets...");
+        _logger.LogInformation("Starting Coordinator...");
         _coordinator.Start(pipeName, FindFirmlets());
 
         if (!_options.Transient)
-            stoppingToken.WaitHandle.WaitOne();
+            await stoppingToken.WaitCancellation();
 
-        return Task.CompletedTask;
+        _logger.LogInformation("Stopping coordinator...");
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)

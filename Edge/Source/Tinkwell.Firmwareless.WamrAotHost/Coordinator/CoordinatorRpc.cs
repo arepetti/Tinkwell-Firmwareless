@@ -22,7 +22,8 @@ sealed class CoordinatorRpc(ILogger<CoordinatorRpc> logger, FirmletsRepository r
     [JsonRpcMethod(CoordinatorMethods.PublishMqttMessage)]
     public void PublishMqttMessage(MqttMessage request)
     {
-        if (!_repository.TryGetByHostId(request.HostId, out var _))
+        _logger.LogTrace("Received message from {HostId}: {Topic}", request.HostId, request.Topic)
+;        if (!_repository.TryGetByHostId(request.HostId, out var _))
             _logger.LogError("Received a request to send an MQTT nessage from an unknown sender {HostId}", request.HostId);
         else
             _messageQueue.EnqueueOutgoingMessage(request);

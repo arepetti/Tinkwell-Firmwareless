@@ -8,7 +8,7 @@ namespace Tinkwell.Firmwareless.WamrAotHost.Coordinator.Mqtt;
 // that prefix. It's used internally by Tinkwell to dispatch these messages to the correct destination.
 static partial class MqttTopicTranslator
 {
-    public static (string HostId, string Topic)? FromTinkwellToPlain(string topic)
+    public static (string HostExternalReferenceId, string Topic)? FromTinkwellToPlain(string topic)
     {
 
         var match = ParseTopicRegex().Match(topic);

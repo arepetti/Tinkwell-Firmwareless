@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using MQTTnet;
 using MQTTnet.Server;
 using System.Net;
 
@@ -34,11 +35,27 @@ public sealed class MqttBroker(ILogger<MqttBroker> logger) : BackgroundService
             return Task.CompletedTask;
         };
 
+        mqttServer.ApplicationMessageEnqueuedOrDroppedAsync += e =>
+        {
+            _logger.LogInformation("Sender {SenderName} sent a {Status} {Topic} with {Payload}",
+                e.SenderClientId,
+                e.IsDropped ? "DROPPED message" : "message",
+                e.ApplicationMessage.Topic,
+                e.ApplicationMessage.ConvertPayloadToString()
+            );
+            return Task.CompletedTask;
+        };
 
         await mqttServer.StartAsync();
         _logger.LogInformation("MQTT broker started successfully on port {Port}.", Port);
 
-        stoppingToken.WaitHandle.WaitOne();
+        try
+        {
+            await Task.Delay(Timeout.Infinite, stoppingToken);
+        }
+        catch (TaskCanceledException)
+        {
+        }
 
         _logger.LogInformation("Stopping MQTT broker...");
         await mqttServer.StopAsync();

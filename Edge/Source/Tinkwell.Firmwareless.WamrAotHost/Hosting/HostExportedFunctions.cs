@@ -37,7 +37,8 @@ sealed class HostExportedFunctions(ILogger<HostExportedFunctions> logger, IpcCli
 
     public void PublishMqttMessage(string topic, string payload)
     {
-        _ipcClient.NotifyAsync(CoordinatorMethods.PublishMqttMessage, new MqttMessage(_ipcClient.HostId, topic, payload));
+        _ipcClient.NotifyAsync(CoordinatorMethods.PublishMqttMessage, new MqttMessage(_ipcClient.HostId, topic, payload))
+            .GetAwaiter().GetResult();
     }
 
     private readonly ILogger<HostExportedFunctions> _logger = logger;

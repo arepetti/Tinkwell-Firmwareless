@@ -31,17 +31,18 @@ builder.ConfigureServices((context, services) =>
     if (cli.RequiredService == RequiredService.Host)
     {
         services
-           .AddSingleton<IWamrHost, WamrHost>()
-           .AddSingleton<IHostExportedFunctions, HostExportedFunctions>()
-           .AddSingleton<IRegisterHostUnsafeNativeFunctions, HostExportedUnsafeNativeFunctions>()
-           .AddSingleton(cli.GetHostServiceOptions())
-           .AddSingleton<IpcClient>()
-           .AddHostedService<HostService>();
+            .AddSingleton<IMqttQueue, MqttQueue>()
+            .AddSingleton<IWamrHost, WamrHost>()
+            .AddSingleton<IHostExportedFunctions, HostExportedFunctions>()
+            .AddSingleton<IRegisterHostUnsafeNativeFunctions, HostExportedUnsafeNativeFunctions>()
+            .AddSingleton(cli.GetHostServiceOptions())
+            .AddSingleton<IpcClient>()
+            .AddHostedService<HostService>();
     }
     else
     {
         services
-            .AddSingleton<MqttQueue, MqttQueue>()
+            .AddSingleton<IMqttQueue, MqttQueue>()
             .AddHostedService<MqttMessagesProcessingService>()
             .AddSingleton(cli.GetCoordinatorServiceOptions())
             .AddSingleton<IpcServer>()
@@ -55,4 +56,5 @@ builder.ConfigureServices((context, services) =>
 
 using var host = builder.Build();
 await host.StartAsync();
+await host.WaitForShutdownAsync();
 

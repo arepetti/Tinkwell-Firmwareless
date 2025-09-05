@@ -8,11 +8,13 @@
         <InvariantGlobalization>true</InvariantGlobalization>
         <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
         <ProduceReferenceAssembly>False</ProduceReferenceAssembly>
+        <EnableStreamJsonRpcInterceptors>true</EnableStreamJsonRpcInterceptors>
+    </PropertyGroup>
 
+    <PropertyGroup>
+        <DockerfileRunArguments>-p 1883:1883</DockerfileRunArguments>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
         <ContainerDevelopmentMode>Regular</ContainerDevelopmentMode>
-
-        <EnableStreamJsonRpcInterceptors>true</EnableStreamJsonRpcInterceptors>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
