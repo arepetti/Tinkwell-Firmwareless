@@ -63,25 +63,27 @@ static partial class Wamr
         IntPtr errorMessage;
         IntPtr moduleInstance;
 
+        // Extra check but wasm_runtime_load() already does this for us. We just want to be sure that these modules
+        // are exactly what we expect (including the extension).
         if (modulePath.EndsWith(".aot", StringComparison.OrdinalIgnoreCase))
         {
             if (WasmChecker.IsAot(modulePath) == false)
-                throw new HostException($"Module'{modulePath}' is not a valid .aot file.");
-
-            moduleInstance = Libiwasm.wasm_runtime_load_from_aot_file(modulePath, out errorMessage, 512);
-            if (moduleInstance == nint.Zero)
-                throw new HostException($"Failed to load AOT module '{modulePath}': {NativeMemory.AnsiPtrToString(errorMessage)}");
+               throw new HostException($"Module'{modulePath}' is not a valid .aot file.");
         }
-        else
+        else if (modulePath.EndsWith(".wasm", StringComparison.OrdinalIgnoreCase))
         {
             if (WasmChecker.IsWasm(modulePath) == false)
                 throw new HostException($"Module'{modulePath}' is not a valid .wasm file.");
-
-            var bytes = File.ReadAllBytes(modulePath);
-            moduleInstance = Libiwasm.wasm_runtime_load(bytes, (uint)bytes.Length, out errorMessage, 512);
-            if (moduleInstance == nint.Zero)
-                throw new HostException($"Failed to load WASM module '{modulePath}': {NativeMemory.AnsiPtrToString(errorMessage)}");
         }
+        else
+        {
+            throw new HostException($"Module'{modulePath}' is not a valid .wasm/.aot file.");
+        }
+
+        var bytes = File.ReadAllBytes(modulePath);
+        moduleInstance = Libiwasm.wasm_runtime_load(bytes, (uint)bytes.Length, out errorMessage, 512);
+        if (moduleInstance == nint.Zero)
+            throw new HostException($"Failed to load WASM module '{modulePath}': {NativeMemory.AnsiPtrToString(errorMessage)}");
 
         var inst = Libiwasm.wasm_runtime_instantiate(moduleInstance, stackSize: 64 * 1024, heapSize: 64 * 1024, out errorMessage, 512);
         if (inst == nint.Zero)

@@ -24,14 +24,11 @@ static class Libiwasm
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
     public static extern void wasm_runtime_destroy();
 
-    [DllImport("libiwasm", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
     public static extern void wasm_runtime_set_log_level(WamrLogLevel level);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
     public static extern IntPtr wasm_runtime_load(byte[] buf, uint size, out IntPtr errorBuf, uint errorBufSize);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
-    public static extern IntPtr wasm_runtime_load_from_aot_file(string path, out IntPtr errorBuf, uint errorBufSize);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
     public static extern IntPtr wasm_runtime_instantiate(IntPtr module, uint stackSize, uint heapSize, out IntPtr errorBuf, uint errorBufSize);
