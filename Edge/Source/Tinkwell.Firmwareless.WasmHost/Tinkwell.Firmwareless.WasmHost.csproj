@@ -1,18 +1,49 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.8" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Docker.DotNet" Version="3.125.15" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.8" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Tinkwell.Firmwareless\Tinkwell.Firmwareless.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Tinkwell.Firmwareless\Tinkwell.Firmwareless.csproj" />
+    </ItemGroup>
 
+    <ItemGroup>
+      <None Update="appsettings.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+    <!-- We need AppImageFile to build on Windows (that colon in AppImageName...) -->
+    <PropertyGroup>
+        <AppImageName>wamraothost:1.0.0</AppImageName>
+        <AppImageFile>wamraothost-1.0.0.tar</AppImageFile>
+    </PropertyGroup>
+
+    <Target Name="GetWasmHostOutputDir">
+        <MSBuild Projects="$(SolutionDir)Tinkwell.Firmwareless.WasmHost\Tinkwell.Firmwareless.WasmHost.csproj" Targets="GetTargetPath" Properties="Configuration=$(Configuration)">
+            <Output TaskParameter="TargetOutputs" PropertyName="WasmHostProgram" />
+        </MSBuild>
+        <PropertyGroup>
+            <WasmHostOutputDir>$([System.IO.Path]::GetDirectoryName($(WasmHostProgram)))\</WasmHostOutputDir>
+            <AppImageTar>$(WasmHostOutputDir)$(AppImageFile)</AppImageTar>
+        </PropertyGroup>
+    </Target>
+
+    <Target Name="BuildAppDockerImage" AfterTargets="Build" DependsOnTargets="GetWasmHostOutputDir">
+        <Exec Command="docker rmi -f &quot;$(AppImageName)&quot;" IgnoreExitCode="true" />
+        <Message Importance="High" Text="Building Docker image $(AppImageName)..." />
+        <Exec Command="docker build -t &quot;$(AppImageName)&quot; -f &quot;$(SolutionDir)Tinkwell.Firmwareless.WamrAotHost\Dockerfile&quot; &quot;$(SolutionDir.TrimEnd(`\`))&quot;" />
+        <MakeDir Directories="$(WasmHostOutputDir)" />
+        <Exec Command="docker save &quot;$(AppImageName)&quot; -o &quot;$(AppImageTar)&quot;" />
+    </Target>
 </Project>
+

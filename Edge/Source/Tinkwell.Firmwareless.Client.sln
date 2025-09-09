@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.14.36301.6
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tinkwell.Firmwareless.WasmHost", "Tinkwell.Firmwareless.WasmHost\Tinkwell.Firmwareless.WasmHost.csproj", "{1827909C-29AD-489F-83E1-8353EB2113AD}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C2152FC2-025B-469E-80BF-8D4CCB2A50E5} = {C2152FC2-025B-469E-80BF-8D4CCB2A50E5}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tinkwell.Firmwareless", "Tinkwell.Firmwareless\Tinkwell.Firmwareless.csproj", "{FF3E2A65-F601-4D8F-B593-B4EE2D8B0648}"
 EndProject
