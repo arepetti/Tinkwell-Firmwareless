@@ -1,9 +1,10 @@
+using Microsoft.Extensions.Logging;
 using System.IO.Compression;
 using System.Security.Cryptography;
 
 namespace Tinkwell.Firmwareless.WasmHost.Packages;
 
-sealed class PackageValidator(IPublicRepository repository) : IPackageValidator
+sealed class PackageValidator(ILogger<PackageValidator> logger, IPublicRepository repository) : IPackageValidator
 {
     public FirmwarelessHostInformation HostInfo { get; set; } = FirmwarelessHostInformation.Default;
 
@@ -20,6 +21,7 @@ sealed class PackageValidator(IPublicRepository repository) : IPackageValidator
         CheckCompatibility(archive);
     }
 
+    private readonly ILogger<PackageValidator> _logger = logger;
     private readonly IPublicRepository _repository = repository;
     private FirmwarelessRepositoryInformation? _publicRepositoryInfo;
 
@@ -103,8 +105,9 @@ sealed class PackageValidator(IPublicRepository repository) : IPackageValidator
             var hash = SHA512.HashData(manifest);
             return publicKey.VerifyData(hash, signature, HashAlgorithmName.SHA512, RSASignaturePadding.Pkcs1);
         }
-        catch
+        catch (Exception e)
         {
+            _logger.LogError(e, "Cannot verify manifest signature: {Message}", e.Message);
             return false;
         }
     }

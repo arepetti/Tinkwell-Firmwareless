@@ -49,6 +49,11 @@ sealed class HostExportedUnsafeNativeFunctions(ILogger<HostExportedUnsafeNativeF
     [SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "Match exported name")]
     private static void abort(nint execEnv, nint messagePtr, nint fileNamePtr, int line, int column)
     {
+        // This function is not safe (messagePtr and fileNamePtr do not have a maximum length).
+        // Unfortunately it's a function required by the AssemblyScript runtime (which we want to support).
+        // HighlyUnsafeUtf8PtrToString() must be used with extreme caution. We accept this risk because a
+        // malformed call will print process' memory to the log and nothing else (512 bytes at most) and
+        // it'll cause the process to terminate anyway.
         Debug.Assert(_instance is not null);
         try
         {

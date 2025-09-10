@@ -179,12 +179,17 @@ sealed class HostProcessesCoordinator(
             launchTarget = Environment.ProcessPath;
         }
 
-        return Process.Start(new ProcessStartInfo
+        var startInfo = new ProcessStartInfo
         {
             FileName = launchTarget,
             Arguments = arguments,
             UseShellExecute = false
-        });
+        };
+
+        startInfo.EnvironmentVariables.Remove("TW_MQTT_CREDENTIALS_USERNAME");
+        startInfo.EnvironmentVariables.Remove("TW_MQTT_CREDENTIALS_PASSWORD");
+        
+        return Process.Start(startInfo);
     }
 
     private async void MonitorProcesses(object? state)

@@ -18,19 +18,19 @@ sealed class HostExportedFunctions(ILogger<HostExportedFunctions> logger, IpcCli
         switch (severity)
         {
             case 0:
-                _logger.LogError("{Topic}: {Message}", topic, message);
+                _logger.LogError(ShortConsoleLogFormatter.FirmwareEntry, "{Topic}: {Message}", topic, message);
                 break;
             case 1:
-                _logger.LogWarning("{Topic}: {Message}", topic, message);
+                _logger.LogWarning(ShortConsoleLogFormatter.FirmwareEntry, "{Topic}: {Message}", topic, message);
                 break;
             case 2:
-                _logger.LogInformation("{Topic}: {Message}", topic, message);
+                _logger.LogInformation(ShortConsoleLogFormatter.FirmwareEntry, "{Topic}: {Message}", topic, message);
                 break;
             case 3:
-                _logger.LogDebug("{Topic}: {Message}", topic, message);
+                _logger.LogDebug(ShortConsoleLogFormatter.FirmwareEntry, "{Topic}: {Message}", topic, message);
                 break;
             default:
-                _logger.LogTrace("{Topic}: {Message}", topic, message);
+                _logger.LogTrace(ShortConsoleLogFormatter.FirmwareEntry, "{Topic}: {Message}", topic, message);
                 break;
         }
     }

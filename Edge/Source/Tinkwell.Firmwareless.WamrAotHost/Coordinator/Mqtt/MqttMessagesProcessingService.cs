@@ -97,7 +97,7 @@ sealed class MqttMessagesProcessingService(
 
         _clientOptions = clientOptionsBuilder.Build();
 
-        _mqttClient.ConnectedAsync += HandleClientConnectedAsync;
+        _mqttClient.ConnectedAsync += HandleConnectedAsync;
         _mqttClient.ApplicationMessageReceivedAsync += HandleApplicationMessageReceivedAsync;
 
         await ConnectAsync(cancellationToken);
@@ -167,7 +167,7 @@ sealed class MqttMessagesProcessingService(
         }
     }
 
-    private async Task HandleClientConnectedAsync(MqttClientConnectedEventArgs e)
+    private async Task HandleConnectedAsync(MqttClientConnectedEventArgs e)
     {
         _logger.LogDebug("MQTT client connected to {Server}:{Port}",
             _options.MqttBrokerAddress, _options.MqttBrokerPort);

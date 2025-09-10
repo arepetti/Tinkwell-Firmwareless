@@ -1,3 +1,4 @@
+using Docker.DotNet.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Console;
@@ -9,6 +10,24 @@ sealed class ConsoleLogFormatter(IOptions<ConsoleFormatterOptions> options)
     : ConsoleFormatter(nameof(ConsoleLogFormatter))
 {
     public static readonly EventId FirmwareEntry = new(2025, "Firmware");
+
+    public static LogLevel ParseFirmwareLogLevel(string logMessage)
+    {
+        var parts = logMessage.Split(' ', 3, StringSplitOptions.None);
+        if (parts.Length < 3)
+            return LogLevel.Trace; // Just stdout output not coming from logging
+
+        return parts[1] switch
+        {
+            "trce" or "trace" => LogLevel.Trace,
+            "dbug" or "debug" => LogLevel.Debug,
+            "info" => LogLevel.Information,
+            "warn" or "warning" => LogLevel.Warning,
+            "err" or "error" => LogLevel.Error,
+            "crit" or "critical" => LogLevel.Critical,
+            _ => LogLevel.Trace
+        };
+    }
 
     public override void Write<TState>(
         in LogEntry<TState> logEntry,
@@ -116,7 +135,8 @@ sealed class ConsoleLogFormatter(IOptions<ConsoleFormatterOptions> options)
             var line = lines[i];
             if (i > 0)
             {
-                writer.WriteLine(line);
+                if (!string.IsNullOrWhiteSpace(line))
+                    writer.WriteLine(line);
             }
             else
             {

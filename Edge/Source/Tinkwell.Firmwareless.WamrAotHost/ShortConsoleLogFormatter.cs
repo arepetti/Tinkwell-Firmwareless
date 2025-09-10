@@ -6,6 +6,8 @@ using Microsoft.Extensions.Options;
 sealed class ShortConsoleLogFormatter(IOptions<ConsoleFormatterOptions> options)
     : ConsoleFormatter(nameof(ShortConsoleLogFormatter))
 {
+    public static readonly EventId FirmwareEntry = new(2025, "Firmware");
+
     public override void Write<TState>(
         in LogEntry<TState> logEntry,
         IExternalScopeProvider? scopeProvider,
@@ -28,8 +30,12 @@ sealed class ShortConsoleLogFormatter(IOptions<ConsoleFormatterOptions> options)
         writer.Write(now.ToString(_options.TimestampFormat ?? "HH:mm:ss.fff"));
         writer.Write(' ');
 
-        // Log level and category
-        writer.Write($"{logLevel} - {shortCategory}: {message}");
+        // Log level and category. If the log comes directly from the firmlet then
+        // the category is the Host ID so we skip it. See HostExportedFunctions.Log().
+        if (logEntry.EventId.Id == FirmwareEntry.Id)
+            writer.Write($"{logLevel} - {message}");
+        else
+            writer.Write($"{logLevel} - {shortCategory}: {message}");
 
         // Exception
         if (logEntry.Exception is not null)

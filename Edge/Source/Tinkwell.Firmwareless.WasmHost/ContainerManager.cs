@@ -20,11 +20,10 @@ sealed class ContainerManager(ILogger<HostedService> logger, IDockerClient docke
 
         await SetupNetworkInterfaceAsync(NetworkName);
         await InstallContainerImageAsync(cancellationToken);
-        var container = await CreateContainerAsync(cancellationToken);
+        await CreateContainerAsync(cancellationToken);
 
-        _logger.LogDebug("Starting container {ID}...", container.ID);
-        await _docker.Containers.StartContainerAsync(container.ID, new ContainerStartParameters(), cancellationToken);
-        _containerId = container.ID;
+        _logger.LogDebug("Starting container {ID}...", _containerId);
+        await _docker.Containers.StartContainerAsync(_containerId, new ContainerStartParameters(), cancellationToken);
 
         StartAsyncLogCollection(cancellationToken);
 
@@ -37,8 +36,12 @@ sealed class ContainerManager(ILogger<HostedService> logger, IDockerClient docke
         if (_containerId is not null)
         {
             _logger.LogDebug("Shutting down container {ContainerName}", _containerName);
-            await _docker.Containers.StopContainerAsync(_containerId, new ContainerStopParameters { WaitBeforeKillSeconds = (uint)_settings.ShutdownTimeoutSeconds });
-            await _docker.Containers.RemoveContainerAsync(_containerId, new ContainerRemoveParameters { Force = true });
+
+            var stopParams = new ContainerStopParameters { WaitBeforeKillSeconds = (uint)_settings.ContainerShutdownTimeoutSeconds };
+            await _docker.Containers.StopContainerAsync(_containerId, stopParams, cancellationToken);
+
+            var removeParams = new ContainerRemoveParameters { Force = true };
+            await _docker.Containers.RemoveContainerAsync(_containerId, removeParams, cancellationToken);
         }
         _logger.LogInformation("Container stopped");
     }
@@ -53,7 +56,7 @@ sealed class ContainerManager(ILogger<HostedService> logger, IDockerClient docke
     private string? _containerName;
     private string? _containerId;
 
-    private async Task<CreateContainerResponse> CreateContainerAsync(CancellationToken cancellationToken)
+    private async Task CreateContainerAsync(CancellationToken cancellationToken)
     {
         var createParams = new CreateContainerParameters
         {
@@ -80,16 +83,34 @@ sealed class ContainerManager(ILogger<HostedService> logger, IDockerClient docke
                     { "/var/cache", "" }
                 },
                 NetworkMode = NetworkName,
-                ExtraHosts = ["host.docker.internal:host-gateway"]
+                ExtraHosts = ["host.docker.internal:host-gateway"],
+                CapDrop = ["ALL"],
+                CapAdd = ["CAP_IPC_LOCK", "CAP_KILL", "CAP_NET_RAW", "CAP_SYS_NICE"], // https://www.man7.org/linux/man-pages/man7/capabilities.7.html
+                CPUQuota = _settings.ContainerCpuQuota,
+                Memory = _settings.ContainerMaximumMemoryUsage,
             }
         };
 
-        _logger.LogDebug("Creating container {ID} from image {Image}...", createParams.Name, createParams.Image);
-        var container = await _docker.Containers.CreateContainerAsync(createParams, cancellationToken);
+        try
+        {
+            await Create();
+        }
+        catch (DockerApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Conflict)
+        {
+            _logger.LogWarning("Container {ContainerName} already exists, removing it...", _containerName);
+            await _docker.Containers.RemoveContainerAsync(_containerName, new ContainerRemoveParameters { Force = true }, cancellationToken);
 
-        await _docker.Networks.ConnectNetworkAsync("bridge", new() { Container = container.ID }, cancellationToken);
-        
-        return container;
+            await Create();
+        }
+
+        await _docker.Networks.ConnectNetworkAsync("bridge", new() { Container = _containerId }, cancellationToken);
+
+        async Task Create()
+        {
+            _logger.LogDebug("Creating container {ID} from image {Image}...", createParams.Name, createParams.Image);
+            var container = await _docker.Containers.CreateContainerAsync(createParams, cancellationToken);
+            _containerId = container.ID;
+        }
     }
 
     private async Task InstallContainerImageAsync(CancellationToken cancellationToken)
@@ -164,11 +185,7 @@ sealed class ContainerManager(ILogger<HostedService> logger, IDockerClient docke
                         break;
 
                     string text = Encoding.UTF8.GetString(buffer, 0, result.Count);
-
-                    if (result.Target == MultiplexedStream.TargetStream.StandardOut)
-                        _logger.LogInformation(ConsoleLogFormatter.FirmwareEntry, "{Text}", text);
-                    else if (result.Target == MultiplexedStream.TargetStream.StandardError)
-                        _logger.LogWarning(ConsoleLogFormatter.FirmwareEntry, "{Text}", text);
+                    _logger.Log(ConsoleLogFormatter.ParseFirmwareLogLevel(text), "{Text}", text);
                 }
             }
             catch (OperationCanceledException)
@@ -179,6 +196,6 @@ sealed class ContainerManager(ILogger<HostedService> logger, IDockerClient docke
             {
                 _logger.LogError(e, "Error collecting container logs");
             }
-        });
+        }, stoppingToken);
     }
 }
