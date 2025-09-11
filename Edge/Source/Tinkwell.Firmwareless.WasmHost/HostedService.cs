@@ -12,7 +12,11 @@ sealed class HostedService(ILogger<HostedService> logger, IPackageDiscovery disc
     {
         _logger.LogDebug("Starting...");
         Stopwatch stopwatch = Stopwatch.StartNew();
+
+        // Search for packaged firmlets
         var firmletsPaths = await _discovery.DiscoverAsync(AppContext.BaseDirectory, cancellationToken);
+
+        // Unpack packages into a "cache" directory accessible to the Docker container
         foreach (var firmletPath in firmletsPaths)
         {
             _logger.LogDebug("Discovered valid firmlet: {Path}", Path.GetFileName(firmletPath));
@@ -23,8 +27,14 @@ sealed class HostedService(ILogger<HostedService> logger, IPackageDiscovery disc
 
         await WriteFirmwareListAsync(cancellationToken);
 
+        // Delete orphans (firmlets that are unpacked but not referenced by any package)
+        int deletedFirmletsCount = DeleteOrphanedFirmlets();
+
         stopwatch.Stop();
-        _logger.LogDebug("Discovered and unpacked {Count} firmlets in {ElapsedMilliseconds} ms", _firmlets.Count, stopwatch.ElapsedMilliseconds);
+        _logger.LogDebug("In use {Count} firmlets, {Deleted} orphans. {ElapsedMilliseconds} ms",
+            _firmlets.Count,
+            deletedFirmletsCount,
+            stopwatch.ElapsedMilliseconds);
 
         await _containerManager.StartAsync(GetCachePath(), cancellationToken);
         _logger.LogInformation("Started");
@@ -87,6 +97,50 @@ sealed class HostedService(ILogger<HostedService> logger, IPackageDiscovery disc
 
         static string Sanitize(string text)
             => text.Replace('/', '_').Replace('\\', '_'); // A bit paranoic but it's an "external" input...
+    }
+
+    private int DeleteOrphanedFirmlets()
+    {
+        var allFirmletsPaths = FindUnpackagedFirmlets();
+        var firmletsInUsePaths = _firmlets.Select(x => x.Path);
+        var orphanedFirmletsPaths = allFirmletsPaths
+            .Except(firmletsInUsePaths)
+            .ToArray();
+
+        if (orphanedFirmletsPaths.Length == 0)
+            return 0;
+
+        _logger.LogInformation("Deleting {Count} orphaned firmlets", orphanedFirmletsPaths.Length);
+        foreach (var orphanedFirmletPath in orphanedFirmletsPaths)
+        {
+            try
+            {
+                Directory.Delete(orphanedFirmletPath, true);
+                _logger.LogDebug("Deleted orphaned firmlet at {Path}", orphanedFirmletPath);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Cannot delete orphaned firmlet at {Path}", orphanedFirmletPath);
+            }
+        }
+
+        return orphanedFirmletsPaths.Length;
+    }
+
+    private static IEnumerable<string> FindUnpackagedFirmlets()
+    {
+        // base directory/vendor directory/product directory/firmware version directory/
+        var installedFirmletsDirectories = new List<string>();
+
+        var vendors = Directory.GetDirectories(GetCachePath());
+        foreach (var vendor in vendors)
+        {
+            var products = Directory.GetDirectories(vendor);
+            foreach (var product in products)
+                installedFirmletsDirectories.AddRange(Directory.GetDirectories(product));
+        }
+
+        return installedFirmletsDirectories;
     }
 
     private Task WriteFirmwareListAsync(CancellationToken cancellationToken)

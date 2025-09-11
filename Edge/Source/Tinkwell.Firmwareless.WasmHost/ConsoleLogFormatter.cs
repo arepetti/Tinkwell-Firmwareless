@@ -152,7 +152,7 @@ sealed class ConsoleLogFormatter(IOptions<ConsoleFormatterOptions> options)
                     var rest = parts[2];
 
                     var color = GetColorForLevel(level);
-                    writer.WriteLine($"{timestamp} {color}{level}{Reset} {rest}");
+                    writer.Write($"{timestamp} {color}{level}{Reset} {rest}");
                 }
             }
         }

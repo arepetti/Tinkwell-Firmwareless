@@ -46,7 +46,7 @@ sealed class ContainerManager(ILogger<HostedService> logger, IDockerClient docke
         _logger.LogInformation("Container stopped");
     }
 
-    const string ContainerFirmwarePath = "/mnt/firmwares";
+    const string ContainerFirmwarePath = "/mnt/firmlets";
     const string NetworkName = "mqtt_only_net";
 
     private readonly ILogger<HostedService> _logger = logger;
