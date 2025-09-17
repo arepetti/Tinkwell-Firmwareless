@@ -6,9 +6,9 @@ namespace Tinkwell.Firmwareless.CompilationServer.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
-public class CompilerController : TinkwellControllerBase
+public class CompilerController : ControllerBase
 {
-    public CompilerController(ICompilationService compilationService, ILogger<CompilerController> logger) : base(logger)
+    public CompilerController(ICompilationService compilationService, ILogger<CompilerController> logger)
     {
         _compilationService = compilationService;
         _logger = logger;

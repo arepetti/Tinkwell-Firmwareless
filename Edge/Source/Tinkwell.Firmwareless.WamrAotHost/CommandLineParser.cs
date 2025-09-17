@@ -23,7 +23,7 @@ enum RequiredService
 // Where:
 //
 // --path<PATH>
-//     Required. Base directory where firmwares to load are saved. It must contains the firmware list firmwares.txt.
+//     Required. Base directory where firmwares to load are saved. It must contains the firmware list ".firmlets"
 // --mqtt-broker-address=<ADDRESS>
 //     Address of the MQTT broker. Can be omitted if specified using the env var TW_MQTT_BROKER_ADDRESS.
 // --mqtt-broker-port<PORT>

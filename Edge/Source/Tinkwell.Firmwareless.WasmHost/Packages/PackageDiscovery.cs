@@ -1,33 +1,87 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Tinkwell.Firmwareless.WasmHost.Runtime;
 
 namespace Tinkwell.Firmwareless.WasmHost.Packages;
 
-sealed class PackageDiscovery(ILogger<PackageDiscovery> logger, IPackageValidator validator) : IPackageDiscovery
+sealed class PackageDiscovery(ILogger<PackageDiscovery> logger, IPackageValidator validator, IPublicRepository repository) : IPackageDiscovery
 {
-    public async Task<IEnumerable<string>> DiscoverAsync(string baseDirectory, CancellationToken cancellationToken)
+    public async Task<IEnumerable<ProductEntry>> DiscoverAsync(CancellationToken cancellationToken)
     {
-        var firmletsDirectory = Path.Combine(baseDirectory, Names.FirmletsDirectory);
-        if (!Directory.Exists(firmletsDirectory))
-        {
-            _logger.LogWarning("Firmlets directory not found: {Path}", firmletsDirectory);
-            return [];
-        }
+        var config = LoadConfiguration();
+        await DownloadMissingFirmletsAsync(config, cancellationToken);
+        DeleteOrphans(config);
+        await ValidateFirmletsAsync(config, cancellationToken);
 
-        List<string> validFirmlets = [];
-        var firmlets = Directory.EnumerateFiles(firmletsDirectory, Names.FirmletsSearchPattern, SearchOption.AllDirectories);
-        foreach (var file in firmlets)
-        {
-            if (await IsValidFirmletAsync(file, cancellationToken))
-                validFirmlets.Add(file);
-            else
-                _logger.LogWarning("Invalid firmlet archive, skipped: {Path}", file);
-        }
-
-        return validFirmlets;
+        return config.Products;
     }
 
     private readonly ILogger<PackageDiscovery> _logger = logger;
     private readonly IPackageValidator _validator = validator;
+    private readonly IPublicRepository _repository = repository;
+
+    private SystemConfiguration LoadConfiguration()
+    {
+        var path = Path.Combine(AppLocations.ConfigurationPath, Names.SystemConfigurationFileName);
+        _logger.LogTrace("Loading system configuration from {Path}", path);
+
+        var content = File.ReadAllText(path);
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        options.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+        options.Converters.Add(new JsonStringEnumConverter());
+        return JsonSerializer.Deserialize<SystemConfiguration>(content, options)!;
+    }
+
+    private async Task DownloadMissingFirmletsAsync(SystemConfiguration config, CancellationToken cancellationToken)
+    {
+        foreach (var product in config.Products)
+        {
+            if (cancellationToken.IsCancellationRequested)
+                return;
+
+            if (string.IsNullOrWhiteSpace(product.Package))
+                product.Package = await _repository.DownloadFirmwareAsync(product, cancellationToken);
+
+            // TODO: check for updates!
+        }
+    }
+
+    private void DeleteOrphans(SystemConfiguration config)
+    {
+        // Note that this orphans are not the same deleted in FirmletsManager! Here we delete orphan packages (.zip) while in FirmletsManager
+        // we delete the unpacked firmlets (directories).
+        var existingFirmlets = Directory.EnumerateFiles(AppLocations.FirmletsPackagesPath, Names.FirmletsSearchPattern, SearchOption.AllDirectories);
+        var requiredFirmlets = config.Products.Select(x => x.Package!);
+        var orphans = existingFirmlets.Except(requiredFirmlets);
+        foreach (var orphan in orphans)
+        {
+            try
+            {
+                File.Delete(orphan);
+                _logger.LogInformation("Deleted orphaned firmlet package: {Path}", orphan);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Cannot delete orphaned firmlet package: {Path}", orphan);
+            }
+        }
+    }
+
+    private async Task ValidateFirmletsAsync(SystemConfiguration config, CancellationToken cancellationToken)
+    {
+        foreach (var product in config.Products)
+        {
+            if (cancellationToken.IsCancellationRequested)
+                return;
+
+            if (!await IsValidFirmletAsync(product.Package!, cancellationToken))
+            {
+                _logger.LogWarning("Invalid firmlet archive, skipped: {Path}", product.Package);
+                product.Disabled = true;
+            }
+        }
+    }
 
     private async ValueTask<bool> IsValidFirmletAsync(string path, CancellationToken cancellationToken)
     {
@@ -38,7 +92,7 @@ sealed class PackageDiscovery(ILogger<PackageDiscovery> logger, IPackageValidato
         }
         catch (FirmwareValidationException e)
         {
-            _logger.LogWarning(e, "Firmware validation failed: {Message}", e.Message);
+            _logger.LogWarning(e, "Firmware validation of {Path} failed: {Message}", path, e.Message);
         }
         catch (Exception e)
         {
@@ -48,3 +102,4 @@ sealed class PackageDiscovery(ILogger<PackageDiscovery> logger, IPackageValidato
         return false;
     }
 }
+

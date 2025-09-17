@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Console;
 using System.Runtime.InteropServices;
 using Tinkwell.Firmwareless.WasmHost;
 using Tinkwell.Firmwareless.WasmHost.Packages;
+using Tinkwell.Firmwareless.WasmHost.Runtime;
 
 var builder = Host.CreateDefaultBuilder(args);
 
@@ -26,6 +27,7 @@ builder.ConfigureServices((services) =>
     services.AddScoped<IPublicRepository, LocalDevelopmentFileSystemBasedRepository>();
     services.AddScoped<IPackageDiscovery, PackageDiscovery>();
     services.AddScoped<IPackageValidator, PackageValidator>();
+    services.AddScoped<IFirmletsManager, FirmletsManager>();
     services.AddScoped<IContainerManager, ContainerManager>();
 
     services.AddSingleton<IDockerClient>(serviceProvider =>

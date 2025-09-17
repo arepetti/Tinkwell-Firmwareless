@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using System.IO.Compression;
 using System.Security.Cryptography;
+using Tinkwell.Firmwareless.WasmHost.Runtime;
 
 namespace Tinkwell.Firmwareless.WasmHost.Packages;
 

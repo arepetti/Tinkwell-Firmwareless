@@ -2,6 +2,7 @@ namespace Tinkwell.Firmwareless.WasmHost;
 
 sealed class Settings
 {
+    public string PublicRepositoryUrl { get; set; } = "localhost";
     public string ImageName { get; set; } = "wamraothost";
     public string ImageTag { get; set; } = "1.0.0";
     public string ImageTarFileName { get; set; } = "wamraothost-1.0.0.tar";

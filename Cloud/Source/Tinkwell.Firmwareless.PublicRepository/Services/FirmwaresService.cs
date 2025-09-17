@@ -30,7 +30,7 @@ public sealed class FirmwaresService(ILogger<FirmwaresService> logger, AppDbCont
 
         // Basic firmware payload validation
         if (request.File.Length > _uploadOpts.MaxFirmwareSizeBytes)
-            throw new ArgumentException($"Firmware size cannot exceed {_uploadOpts.MaxFirmwareSizeBytes / 1024 / 1024} MB.", nameof(request.File));
+            throw new TooBigException($"Firmware size cannot exceed {_uploadOpts.MaxFirmwareSizeBytes / 1024 / 1024} MB.");
 
         try
         {

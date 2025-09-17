@@ -1,6 +1,8 @@
-﻿namespace Tinkwell.Firmwareless.WasmHost.Packages;
+﻿using Tinkwell.Firmwareless.WasmHost.Runtime;
+
+namespace Tinkwell.Firmwareless.WasmHost.Packages;
 
 interface IPackageDiscovery
 {
-    Task<IEnumerable<string>> DiscoverAsync(string baseDirectory, CancellationToken cancellationToken);
+    Task<IEnumerable<ProductEntry>> DiscoverAsync(CancellationToken cancellationToken);
 }

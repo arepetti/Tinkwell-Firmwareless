@@ -2,7 +2,8 @@ namespace Tinkwell.Firmwareless.WasmHost.Packages;
 
 static class Names
 {
-    public const string FirmletsDirectory = "Firmlets";
+    public const string SystemConfigurationFileName = "system.json";
+
     public const string FirmletsSearchPattern = "*.zip";
 
     public const string IntegrityManifestEntryName = "integrity/manifest.txt";

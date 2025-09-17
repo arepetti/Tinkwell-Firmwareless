@@ -7,6 +7,7 @@ using Tinkwell.Firmwareless.Cloud.Security;
 using Tinkwell.Firmwareless.PublicRepository.Authentication;
 using Tinkwell.Firmwareless.PublicRepository.Configuration;
 using Tinkwell.Firmwareless.PublicRepository.Database;
+using Tinkwell.Firmwareless.PublicRepository.Middleware;
 using Tinkwell.Firmwareless.PublicRepository.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -87,7 +88,7 @@ builder.Services
 // Build the app
 var app = builder.Build();
 
-app.AddExceptionLogging();
+app.UseMiddleware<ProblemDetailsMiddleware>();
 app.AddFailedResponseLogging();
 
 using (var scope = app.Services.CreateScope())

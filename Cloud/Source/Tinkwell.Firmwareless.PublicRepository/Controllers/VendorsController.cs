@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Tinkwell.Firmwareless.Controllers;
 using Tinkwell.Firmwareless.PublicRepository.Services;
 using Tinkwell.Firmwareless.PublicRepository.Services.Queries;
 
@@ -8,17 +7,14 @@ namespace Tinkwell.Firmwareless.PublicRepository.Controllers;
 
 [ApiController]
 [Route("api/v1/vendors")]
-public sealed class VendorsController(ILogger<VendorsController> logger, VendorsService service) : TinkwellControllerBase(logger)
+public sealed class VendorsController(ILogger<VendorsController> logger, VendorsService service) : ControllerBase
 {
     [HttpPost]
     [Authorize(Policy = "Admin")]
     public async Task<ActionResult<VendorsService.View>> Create(VendorsService.CreateRequest req, CancellationToken ct)
     {
-        return await Try(async () =>
-        {
-            var entity = await _service.CreateAsync(User, req, ct);
-            return CreatedAtAction(nameof(Find), new { id = entity.Id }, entity);
-        });
+        var entity = await _service.CreateAsync(User, req, ct);
+        return CreatedAtAction(nameof(Find), new { id = entity.Id }, entity);
     }
 
     [HttpGet]
@@ -30,41 +26,30 @@ public sealed class VendorsController(ILogger<VendorsController> logger, Vendors
         [FromQuery] string? sort = null,
         CancellationToken ct = default)
     {
-        return await Try(async () =>
-        {
-            var request = new FindRequest(pageIndex, pageLength, filter, sort);
-            return Ok(await _service.FindAllAsync(HttpContext.User, request, ct));
-        });
+        var request = new FindRequest(pageIndex, pageLength, filter, sort);
+        return Ok(await _service.FindAllAsync(HttpContext.User, request, ct));
     }
 
     [HttpGet("{id:guid}")]
     [Authorize]
     public async Task<ActionResult<VendorsService.View>> Find(Guid id, CancellationToken ct)
     {
-        return await Try(async () =>
-        {
-            return Ok(await _service.FindAsync(HttpContext.User, id, ct));
-        });
+        return Ok(await _service.FindAsync(HttpContext.User, id, ct));
     }
 
     [HttpPut]
     [Authorize(Policy = "Admin")]
     public async Task<ActionResult<VendorsService.View>> Update(VendorsService.UpdateRequest req, CancellationToken ct)
     {
-        return await Try(async () =>
-            Ok(await _service.UpdateAsync(User, req, ct))
-        );
+        return Ok(await _service.UpdateAsync(User, req, ct));
     }
 
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = "Admin")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
-        return await Try(async () =>
-        {
-            await _service.DeleteAsync(HttpContext.User, id, ct);
-            return NoContent();
-        });
+        await _service.DeleteAsync(HttpContext.User, id, ct);
+        return NoContent();
     }
 
     private readonly VendorsService _service = service;

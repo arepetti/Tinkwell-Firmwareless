@@ -38,7 +38,7 @@ sealed class CoordinatorService(ILogger<CoordinatorService> logger, HostProcesse
 
     private IEnumerable<FirmletEntry> FindFirmlets()
     {
-        return File.ReadAllLines(Path.Combine(_options.Path, "firmwares.txt"))
+        return File.ReadAllLines(Path.Combine(_options.Path, "firmlets"))
             .Where(line => !string.IsNullOrEmpty(line))
             .Select(line =>
             {

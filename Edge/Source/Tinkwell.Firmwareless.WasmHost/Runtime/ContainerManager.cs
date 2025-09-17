@@ -5,14 +5,12 @@ using Microsoft.Extensions.Options;
 using System.Diagnostics;
 using System.Text;
 
-namespace Tinkwell.Firmwareless.WasmHost;
+namespace Tinkwell.Firmwareless.WasmHost.Runtime;
 
 sealed class ContainerManager(ILogger<HostedService> logger, IDockerClient docker, IOptions<Settings> options) : IContainerManager
 {
-    public async Task StartAsync(string baseDirectory, CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
-        _baseDirectory = baseDirectory;
-
         var stopwatch = new Stopwatch();
         stopwatch.Start();
 
@@ -52,7 +50,6 @@ sealed class ContainerManager(ILogger<HostedService> logger, IDockerClient docke
     private readonly ILogger<HostedService> _logger = logger;
     private readonly IDockerClient _docker = docker;
     private readonly Settings _settings = options.Value;
-    private string? _baseDirectory;
     private string? _containerName;
     private string? _containerId;
 
@@ -74,7 +71,7 @@ sealed class ContainerManager(ILogger<HostedService> logger, IDockerClient docke
                 ReadonlyRootfs = true,
                 Binds =
                 [
-                    $"{_baseDirectory}:{ContainerFirmwarePath}:ro"
+                    $"{AppLocations.FirmletsPath}:{ContainerFirmwarePath}:ro"
                 ],
                 Tmpfs = new Dictionary<string, string>
                 {
