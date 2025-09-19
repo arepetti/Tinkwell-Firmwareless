@@ -13,19 +13,34 @@ sealed class LocalDevelopmentFileSystemBasedRepository : IPublicRepository
         return Task.FromResult(File.ReadAllText(path, Encoding.UTF8));
     }
 
-    public Task<string> DownloadFirmwareAsync(ProductEntry product, CancellationToken cancellationToken)
-    {
+    public async Task<string> DownloadFirmwareAsync(ProductEntry product, CancellationToken cancellationToken)
+    {   
+        var version = await GetLatestFirmletVersionAsync(product, cancellationToken);
         var source = Path.Combine(BaseDirectory,
             product.VendorId,
             product.ProductId,
-            product.FirmwareVersion ?? "latest",
+            version,
             "firmlet.zip");
 
-        var destinationPath = Path.Combine(AppLocations.FirmletsPackagesPath, $"firmlet-{product.ProductId}.zip");
+        var destinationPath = GetPathFor(product);
         File.Copy(source, destinationPath);
-        return Task.FromResult(destinationPath);
+        product.FirmwareVersion = version;
+        return destinationPath;
+    }
+
+    public Task<string> GetLatestFirmletVersionAsync(ProductEntry product, CancellationToken cancellationToken)
+    {
+        var path = Path.Combine(BaseDirectory, product.VendorId, product.ProductId);
+        return Task.FromResult(Directory.EnumerateDirectories(path)
+            .Select(x => new Version(Path.GetFileName(x)))
+            .OrderByDescending(x => x)
+            .First()
+            .ToString());
     }
 
     private static string BaseDirectory
         => Path.Combine(AppContext.BaseDirectory, "LocalRepository");
+
+    private static string GetPathFor(ProductEntry product)
+        => Path.Combine(AppLocations.FirmletsPackagesPath, $"{product.Type.ToString().ToLowerInvariant()}-{product.ProductId}.zip");
 }

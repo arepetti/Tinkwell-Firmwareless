@@ -120,6 +120,15 @@ public sealed class FirmwaresController(ILogger<FirmwaresController> logger, Fir
         return File(stream, MediaTypeNames.Application.Octet, blobName);
     }
 
+    [HttpGet("version/{vendorId:guid}/{productId:guid}")]
+    [Authorize]
+    public async Task<string> Version(Guid vendorId, Guid productId, [FromQuery]string? type = default, CancellationToken ct)
+    {
+        var request = new FirmwaresService.QueryLatestVersionRequest(vendorId, productId, type is null ? FirmwareType.Firmlet : Enum.Parse<FirmwareType>(type, true));
+        var version = await _service.GetLatestAvailableVersionAsync(HttpContext.User, request, ct);
+        return version;
+    }
+
     private readonly ILogger<FirmwaresController> _logger = logger;
     private readonly FirmwaresService _service = service;
     private readonly CompilationProxyService _compilationProxy = compilationProxy;

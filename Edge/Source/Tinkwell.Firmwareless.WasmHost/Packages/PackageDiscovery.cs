@@ -42,8 +42,16 @@ sealed class PackageDiscovery(ILogger<PackageDiscovery> logger, IPackageValidato
 
             if (string.IsNullOrWhiteSpace(product.Package))
                 product.Package = await _repository.DownloadFirmwareAsync(product, cancellationToken);
-
-            // TODO: check for updates!
+            else
+            {
+                var latestVersion = _repository.GetLatestFirmletVersionAsync(product, cancellationToken);
+                if (latestVersion is not null && product.FirmwareVersion != latestVersion.Result)
+                {
+                    _logger.LogInformation("A new version of {Product} is available: {Current} -> {Latest}", product.ProductId, product.FirmwareVersion, latestVersion.Result);
+                    product.Package = await _repository.DownloadFirmwareAsync(product, cancellationToken);
+                    product.FirmwareVersion = latestVersion.Result;
+                }
+            }
         }
     }
 

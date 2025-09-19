@@ -22,7 +22,9 @@ public sealed class FirmwaresService(ILogger<FirmwaresService> logger, AppDbCont
     public sealed record ResolveBlobNameRequest(Guid VendorId, Guid ProductId, FirmwareType Type, string HardwareVersion);
 
     public sealed record View(Guid VendorId, Guid ProductId, Guid Id, string Version, string Compatibility, FirmwareType Type, FirmwareStatus Status, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
-   
+
+    public sealed record QueryLatestVersionRequest(Guid VendorId, Guid ProductId, FirmwareType Type);
+
     public async Task<View> CreateAsync(ClaimsPrincipal user, CreateRequest request, CancellationToken cancellationToken)
     {
         Debug.Assert(user is not null);
@@ -201,6 +203,24 @@ public sealed class FirmwaresService(ILogger<FirmwaresService> logger, AppDbCont
 
         _db.Firmwares.Remove(entity);
         await SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<string> GetLatestAvailableVersionAsync(ClaimsPrincipal user, QueryLatestVersionRequest request, CancellationToken cancellationToken)
+    {
+        var (_, scopes, _) = user.GetScopesAndVendorId();
+
+        if (!scopes.Contains(Scopes.FirmwareDownloadAll))
+            throw new ForbiddenAccessException();
+
+        var firmware = await FindApplicableFirmwareAsync(request.ProductId, request.Type, cancellationToken);
+
+        if (firmware is null)
+            throw new NotFoundException($"No applicable firmware found for product {request.ProductId} and type {request.Type}.");
+
+        if (firmware.Product.VendorId != request.VendorId)
+            throw new NotFoundException($"No applicable firmware found for product {request.ProductId} and vendor {request.VendorId}.");
+
+        return firmware.Version;
     }
 
     public async Task<(string Name, string Certificate)> GetBlobName(ClaimsPrincipal user, ResolveBlobNameRequest request, CancellationToken cancellationToken)

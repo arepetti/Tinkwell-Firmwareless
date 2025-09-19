@@ -1,13 +1,14 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
-using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
+using Tinkwell.Firmwareless.WasmHost.Packages;
 
 namespace Tinkwell.Firmwareless.WasmHost.Runtime;
 
 sealed class PublicRepository(ILogger<PublicRepository> logger, IOptions<Settings> settings, HttpClient httpClient) : IPublicRepository
 {
-    public async Task<string> DownloadFirmwareAsync(ProductEntry product, CancellationToken cancellationToken)
+    public Task<string> DownloadFirmwareAsync(ProductEntry product, CancellationToken cancellationToken)
     {
         var url = $"{_settings.PublicRepositoryUrl}/api/v1/firmwares/download";
 
@@ -16,12 +17,11 @@ sealed class PublicRepository(ILogger<PublicRepository> logger, IOptions<Setting
             vendorId = product.VendorId,
             productId = product.ProductId,
             type = product.Type.ToString().ToLowerInvariant(),
-            hardwareVersion = "1.0",
-            hardwareArchitecture = GetHubAotTargetArchitecture(),
+            hardwareVersion = FirmwarelessHostInformation.Default.HardwareVersion,
+            hardwareArchitecture = FirmwarelessHostInformation.Default.HardwareArchitecture,
         };
 
-        // TODO: retry logic
-        try
+        return Try(async () =>
         {
             using var response = await _httpClient.PostAsJsonAsync(url, request, cancellationToken);
             response.EnsureSuccessStatusCode();
@@ -40,22 +40,30 @@ sealed class PublicRepository(ILogger<PublicRepository> logger, IOptions<Setting
             await stream.CopyToAsync(fileStream, cancellationToken);
 
             _logger.LogInformation("Download complete: {Path}", outputPath);
+            product.FirmwareVersion = PackageManifestReader.Read(outputPath).FirmwareVersion;
             return outputPath;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Failed to download firmware from {Url}, reason: {Reason}", url, e.Message);
-            throw new WasmHostException(e.Message, e);
-        }
+        }, cancellationToken);
     }
 
-    public async Task<string> GetPublicKeyAsync(CancellationToken cancellationToken)
+    public Task<string> GetLatestFirmletVersionAsync(ProductEntry product, CancellationToken cancellationToken)
+    {
+        var url = $"{_settings.PublicRepositoryUrl}/api/v1/firmwares/version/{product.VendorId}/{product.ProductId}?type={product.Type}";
+
+        return Try(async () =>
+        {
+            var latestVersion = await _httpClient.GetStringAsync(url, cancellationToken);
+            _logger.LogDebug("Latest version of {Product} is {Version}", product.ProductId, latestVersion);
+            return latestVersion;
+
+        }, cancellationToken);
+    }
+
+    public Task<string> GetPublicKeyAsync(CancellationToken cancellationToken)
     {
         var cachedPemPath = Path.Combine(AppLocations.ConfigurationPath, "repository_public_key.pem");
         var url = $"{_settings.PublicRepositoryUrl}/api/v1/repository/identity";
 
-        // TODO: retry logic
-        try
+        return Try(async () =>
         {
             if (File.Exists(cachedPemPath))
                 return await File.ReadAllTextAsync(cachedPemPath, cancellationToken);
@@ -63,42 +71,53 @@ sealed class PublicRepository(ILogger<PublicRepository> logger, IOptions<Setting
             var pem = await _httpClient.GetStringAsync(url, cancellationToken);
             await File.WriteAllTextAsync(cachedPemPath, pem, cancellationToken);
             return pem;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Failed to retrieve public key from {Url}, reason: {Reason}", url, e.Message);
-            throw new WasmHostException(e.Message, e);
-        }
+
+        }, cancellationToken);
     }
+
+    private const int NumberOfAttempts = 3;
+    private const int DelayBetweenAttempts = 1000;
 
     private readonly ILogger<PublicRepository> _logger = logger;
     private readonly HttpClient _httpClient = httpClient;
     private readonly Settings _settings = settings.Value;
 
-    private static string GetHubAotTargetArchitecture()
+    private async Task<T> Try<T>(Func<Task<T>> action, CancellationToken cancellationToken, [CallerMemberName] string callerName = "")
     {
-        if (RuntimeInformation.ProcessArchitecture == Architecture.X64)
+        for (int i = 1; i <= NumberOfAttempts; ++i)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                return "windows";
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                return "linux";
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                return "macos";
+            try
+            {
+                return await action();
+            }
+            catch (HttpRequestException e) when (e.StatusCode is null || e.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+            {
+                if (i != NumberOfAttempts)
+                {
+                    _logger.LogWarning(e, "HTTP error occurred ({Message}), attempt {Attempt}/{NumberOfAttempts}", e.Message, i, NumberOfAttempts);
+                    await Task.Delay(DelayBetweenAttempts);
+                }
+                else
+                {
+                    _logger.LogError(e, "HTTP error occurred when calling {Caller}(): {Message}", callerName, e.Message);
+                    throw new WasmHostException($"HTTP error occurred when calling {callerName}(): {e.Message}", e);
+                }
+            }
+            catch (IOException e)
+            {
+                if (i != NumberOfAttempts)
+                {
+                    _logger.LogWarning(e, "I/O error occurred ({Message}), attempt {Attempt}/{NumberOfAttempts}", e.Message, i, NumberOfAttempts);
+                    await Task.Delay(DelayBetweenAttempts);
+                }
+                else
+                {
+                    _logger.LogError(e, "I/O error occurred when calling {Caller}(): {Message}", callerName, e.Message);
+                    throw new WasmHostException($"I/O error occurred when calling {callerName}(): {e.Message}", e);
+                }
+            }
         }
 
-        if (RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                return "aarch64-pc-windows-msvc";
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                return "aarch64-pc-linux-gnu";
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                return "aarch64-apple-darwing-gnu";
-        }
-
-        // There are MANY more possible combinations, this is just for a reference.
-        // If we do not want to customize the build then we could add the target architecture as setting.
-        throw new PlatformNotSupportedException("Unsupported OS platform");
+        throw new InvalidOperationException("Unreachable code");
     }
 }
