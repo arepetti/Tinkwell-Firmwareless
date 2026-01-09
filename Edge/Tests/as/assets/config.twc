@@ -1,0 +1,11 @@
+config limits {
+    minimum: 14
+    maximum: 30
+}
+
+config preferences {
+    unit: "DegreeCelsius",
+}
+
+config schedule {
+}

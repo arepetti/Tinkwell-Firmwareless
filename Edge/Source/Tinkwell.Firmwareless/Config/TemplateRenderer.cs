@@ -2,7 +2,7 @@
 using System.Globalization;
 using Tinkwell.Firmwareless.Config;
 
-namespace Tinkwell.Bootstrapper.Expressions;
+namespace Tinkwell.Firmwareless.Expressions;
 
 sealed class TemplateRenderer
 {

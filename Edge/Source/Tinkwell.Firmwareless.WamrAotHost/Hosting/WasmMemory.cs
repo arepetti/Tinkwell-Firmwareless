@@ -5,19 +5,34 @@ namespace Tinkwell.Firmwareless.WamrAotHost.Hosting;
 
 static class WasmMemory
 {
-    public static string Utf8PtrToString(nint moduleInstance, nint ptr, int length)
+    public static nint MapAppAddressToNative(nint moduleInstance, nint ptr)
+    {
+        Debug.Assert(moduleInstance != nint.Zero);
+        Debug.Assert(ptr != nint.Zero);
+
+        var nativePtr = Libiwasm.wasm_runtime_addr_app_to_native(moduleInstance, ptr);
+        if (nativePtr == nint.Zero)
+            throw new HostException($"Cannot map memory offset {ptr} in module {moduleInstance} to the host.");
+
+        return nativePtr;
+    }
+
+    public static nint MapAppAddressRangeToNative(nint moduleInstance, nint ptr, int length)
     {
         Debug.Assert(moduleInstance != nint.Zero);
         Debug.Assert(ptr != nint.Zero);
         Debug.Assert(length > 0);
 
+        var nativePtr = MapAppAddressToNative(moduleInstance, ptr);
         if (!Libiwasm.wasm_runtime_validate_app_addr(moduleInstance, ptr, (uint)length))
             throw new HostException($"Invalid memory offset {ptr} (size {length}) in module {moduleInstance}.");
 
-        var nativePtr = Libiwasm.wasm_runtime_addr_app_to_native(moduleInstance, ptr);
-        if (nativePtr == nint.Zero)
-            throw new HostException($"Cannot map memory offset {ptr} (size {length}) in module {moduleInstance} to the host.");
+        return nativePtr;
+    }
 
+    public static string Utf8PtrToString(nint moduleInstance, nint ptr, int length)
+    {
+        var nativePtr = MapAppAddressRangeToNative(moduleInstance, ptr, length);
         return NativeMemory.Utf8PtrToString(nativePtr, length);
     }
 

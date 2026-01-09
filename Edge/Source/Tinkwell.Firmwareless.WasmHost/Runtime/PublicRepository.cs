@@ -95,7 +95,7 @@ sealed class PublicRepository(ILogger<PublicRepository> logger, IOptions<Setting
                 if (i != NumberOfAttempts)
                 {
                     _logger.LogWarning(e, "HTTP error occurred ({Message}), attempt {Attempt}/{NumberOfAttempts}", e.Message, i, NumberOfAttempts);
-                    await Task.Delay(DelayBetweenAttempts);
+                    await Task.Delay(DelayBetweenAttempts * i);
                 }
                 else
                 {

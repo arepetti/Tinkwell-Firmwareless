@@ -30,7 +30,7 @@ sealed class WamrHost(ILogger<WamrHost> logger, IRegisterHostUnsafeNativeFunctio
             // The parameter for which we pass zero is the "reason", currently we do not support
             // suspending firmlets then it's always 0.
             _logger.LogTrace("Starting {Name}...", inst.Key);
-            Wamr.CallExportIV(inst.Value, inst.Value.OnStartFunc, 0, required: true);
+            Wamr.CallExportIV(inst.Value, inst.Value.OnStartFunc, arg: 0, required: true);
         }
     }
 
@@ -41,7 +41,7 @@ sealed class WamrHost(ILogger<WamrHost> logger, IRegisterHostUnsafeNativeFunctio
         // The parameter for which we pass zero is the "reason", currently we do not support
         // suspending firmlets then it's always 0.
         foreach (var inst in _instances)
-            Wamr.CallExportIV(inst.Value, inst.Value.OnDisposeFunc, 0);
+            Wamr.CallExportIV(inst.Value, inst.Value.OnDisposeFunc, arg: 0);
     }
 
     public void Notify(string topic, string payload)
@@ -84,7 +84,7 @@ sealed class WamrHost(ILogger<WamrHost> logger, IRegisterHostUnsafeNativeFunctio
 
     private void Dispose(bool disposing)
     {
-        if (_disposed)
+        if (_disposed )
             return;
 
         try

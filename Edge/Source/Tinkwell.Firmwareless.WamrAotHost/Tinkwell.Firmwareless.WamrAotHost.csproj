@@ -35,6 +35,11 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Tinkwell.Firmwareless.Vfs\Tinkwell.Firmwareless.Vfs.csproj" />
+      <ProjectReference Include="..\Tinkwell.Firmwareless\Tinkwell.Firmwareless.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
         <None Update="appsettings.json">
           <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>

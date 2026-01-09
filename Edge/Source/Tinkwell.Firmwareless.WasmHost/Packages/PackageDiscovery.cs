@@ -44,12 +44,12 @@ sealed class PackageDiscovery(ILogger<PackageDiscovery> logger, IPackageValidato
                 product.Package = await _repository.DownloadFirmwareAsync(product, cancellationToken);
             else
             {
-                var latestVersion = _repository.GetLatestFirmletVersionAsync(product, cancellationToken);
-                if (latestVersion is not null && product.FirmwareVersion != latestVersion.Result)
+                var latestVersion = await _repository.GetLatestFirmletVersionAsync(product, cancellationToken);
+                if (latestVersion is not null && product.FirmwareVersion != latestVersion)
                 {
-                    _logger.LogInformation("A new version of {Product} is available: {Current} -> {Latest}", product.ProductId, product.FirmwareVersion, latestVersion.Result);
+                    _logger.LogInformation("A new version of {Product} is available: {Current} -> {Latest}", product.ProductId, product.FirmwareVersion, latestVersion);
                     product.Package = await _repository.DownloadFirmwareAsync(product, cancellationToken);
-                    product.FirmwareVersion = latestVersion.Result;
+                    product.FirmwareVersion = latestVersion;
                 }
             }
         }

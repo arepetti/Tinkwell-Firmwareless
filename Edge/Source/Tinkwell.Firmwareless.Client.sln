@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tinkwell.Firmwareless.WamrA
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tinkwell.Firmwareless.Tools.MqttBroker", "Tinkwell.Firmwareless.Tools.MqttBroker\Tinkwell.Firmwareless.Tools.MqttBroker.csproj", "{B2CDD8EB-1C19-45EE-8298-57644617F47A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tinkwell.Firmwareless.Vfs", "Tinkwell.Firmwareless.Vfs\Tinkwell.Firmwareless.Vfs.csproj", "{E279FD2C-F271-4994-8B26-C7914C5B58A9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,6 +38,10 @@ Global
 		{B2CDD8EB-1C19-45EE-8298-57644617F47A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B2CDD8EB-1C19-45EE-8298-57644617F47A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B2CDD8EB-1C19-45EE-8298-57644617F47A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E279FD2C-F271-4994-8B26-C7914C5B58A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E279FD2C-F271-4994-8B26-C7914C5B58A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E279FD2C-F271-4994-8B26-C7914C5B58A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E279FD2C-F271-4994-8B26-C7914C5B58A9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace Tinkwell.Firmwareless.WamrAotHost.Hosting;
@@ -34,6 +35,14 @@ static partial class Wamr
             Signature = NativeMemory.StringToHGlobalAnsi(signature),
             Attachment = IntPtr.Zero
         };
+    }
+
+    public static NativeSymbol MakeNativeSymbol<T>(string name, T del) where T : notnull, Delegate
+    {
+        var returnType = del.GetMethodInfo().ReturnType;
+        var parameters = del.GetMethodInfo().GetParameters().Select(x => x.ParameterType);
+        var signature = Signature(returnType, parameters.ToArray());
+        return MakeNativeSymbol(name, del, signature);
     }
 
     public static void RegisterNativeFunctions(params NativeSymbol[] syms)
