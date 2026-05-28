@@ -1,5 +1,7 @@
 # Tinkwell Firmwareless
 
+**IMPORTANT**: Tinkwell Firmwareless (and Tinkwell runtime itself) are undergoing a massive refactoring, the current projects might not compile or work as intended. Please be patient until this transition is completed.
+
 **Tinkwell Firmwareless** is the umbrella for a firmware-less IoT stack: product behavior is not baked into per-device firmware images.
 Instead, authors ship **portable modules** (WebAssembly **firmlets** and device **applets**), the **registry** signs and compiles them, the **hub** distributes them at the edge, and **devices** download and run them over **OTA** alongside a thin runtime.
 That model is explained in context in [Tinkwell firmware-less IoT and lab automation](https://dev.to/adriano-repetti/tinkwell-firmware-less-iot-and-lab-automation-2gef) and in the broader architecture discussion [IoT architectures under pressure (Part 1)](https://dev.to/adriano-repetti/iot-architectures-under-pressure-why-implementation-isnt-as-simple-as-it-seems-part-1-3inn). Note that the modern implementation differ greatly from the original idea.
