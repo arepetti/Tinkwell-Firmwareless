@@ -1,2 +1,0 @@
-*.c -linguist-vendored -linguist-generated
-*.h -linguist-vendored -linguist-generated

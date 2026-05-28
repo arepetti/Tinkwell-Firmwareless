@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "Tinkwell.Firmwareless.WasmHost": {
-      "commandName": "Project",
-      "commandLineArgs": "host ."
-    }
-  }
-}
